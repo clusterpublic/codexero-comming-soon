@@ -1825,7 +1825,7 @@ canvas[data-confetti] {
 }
 
 /* Mobile Phone Responsive Styles */
-@media (max-width: 480px) {
+@media (max-width: 560px) {
 
   /* 1. Header padding 0, reduce font size */
   .header {
@@ -1862,7 +1862,7 @@ canvas[data-confetti] {
   }
 
   .bg-text {
-    font-size: 60px !important;
+    font-size: 70px !important;
   }
 
   .logo-3d-container {
