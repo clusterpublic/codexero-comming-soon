@@ -3,6 +3,7 @@ import './App.css';
 import logo from './assets/logo.png';
 import { supabase } from './supabase';
 import Confetti from './Confetti';
+import seiLogo from "./assets/sei_red_and_white.svg"
 
 function LoadingScreen({ onFinish }) {
   const [progress, setProgress] = useState(0);
@@ -12,7 +13,7 @@ function LoadingScreen({ onFinish }) {
     'CONNECTING TO SEI NETWORK...',
     'LOADING SMART CONTRACTS...',
     'VERIFYING SECURITY LAYERS...',
-    'CODEZERO READY TO DEPLOY',
+    'CODEXERO READY TO DEPLOY',
   ];
   const intervalRef = useRef();
 
@@ -155,9 +156,9 @@ function WaitlistModal({ open, onClose }) {
       update();
 
     }
-    if (open) {
+   
       fetchTotalSubscriptions()
-    }
+   
   }, [open]);
 
   async function handleSubmit(e) {
@@ -371,7 +372,7 @@ function App() {
       <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
       {/* Header */}
       <header className="header">
-        <div className="logo">
+          <div className="logo">
           <div className="logo-animated-container">
             <img src={logo} alt="CodeZero" className="logo-img-animated" />
             <div className="bounce-wave"></div>
@@ -418,7 +419,7 @@ function App() {
               <span className="wave-letter">g</span>
               <span className="wave-letter">.</span>
             </h1>
-            <p className="subtitle">On Sei. ICM moves faster.</p>
+            <p className="subtitle">On <img src={seiLogo} alt="Sei" className="sei-logo" /> ICM moves faster.</p>
             {/* Flipping Glass Tags Section */}
             <div className="tags-inline">
               <div className="tag-container-inline">
@@ -476,7 +477,7 @@ function App() {
           </div>
         </div>
       </main>
-    </div>
+      </div>
   );
 }
 
