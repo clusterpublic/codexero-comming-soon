@@ -4,6 +4,7 @@ import logo from './assets/logo.png';
 import { supabase } from './supabase';
 import Confetti from './Confetti';
 import seiLogo from "./assets/sei_red_and_white.svg"
+import HallOfDapp from './components/HallOfDapp';
 
 function LoadingScreen({ onFinish }) {
   const [progress, setProgress] = useState(0);
@@ -477,6 +478,10 @@ function App() {
           </div>
         </div>
       </main>
+      
+      {/* Hall of Dapp Section */}
+      {/* <HallOfDapp /> */}
+      
       </div>
   );
 }

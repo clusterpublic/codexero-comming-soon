@@ -1,0 +1,173 @@
+
+
+
+
+/* Hall of Dapp Component Styles */
+.hall-of-dapp {
+  width: 100%;
+  background: transparent;
+  padding: 80px 0;
+  position: relative;
+}
+
+.hall-of-dapp-container {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.hall-of-dapp-heading {
+  font-size: 3.5rem;
+  font-weight: 700;
+  font-family: inherit;
+  color: #ff6b47;
+  text-align: center;
+  margin-bottom: 60px;
+  background: none;
+  -webkit-background-clip: initial;
+  -webkit-text-fill-color: initial;
+  background-clip: initial;
+  opacity: 0;
+  transform: translateY(30px);
+  animation: fadeInUp 1.2s ease-out 0.3s forwards;
+  filter: drop-shadow(0 25px 50px rgba(255, 107, 71, 0.4)) drop-shadow(0 15px 30px rgba(255, 107, 71, 0.3)) drop-shadow(0 5px 15px rgba(0, 0, 0, 0.2));
+}
+
+/* Tile Gallery (pure CSS/HTML) */
+.tile-gallery {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+}
+
+.tile-gallery__col { display: flex; flex-flow: column nowrap; }
+.tile-gallery__col + .tile-gallery__col { margin-left: 10px; }
+.tile-gallery__row { display: flex; flex-flow: row nowrap; }
+.tile-gallery__row + .tile-gallery__row { margin-top: 10px; }
+
+.tile-gallery__tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 8px 26px rgba(0,0,0,0.18);
+  transform: translateY(30px);
+  opacity: 0;
+  animation: slideIn 0.9s ease forwards;
+}
+
+/* Sizes (width-only; height derives from 16:10 figure) */
+.tile-gallery__tile { width: 205px; }
+.tile-gallery__tile--big { width: 420px;height: 240px; }
+.tile-gallery__tile--narrow { width: 240px;height: 150px; }
+.tile-gallery__tile--normal { width: 240px;height: 150px; }
+
+/* The figure dictates the 16:10 aspect ratio */
+.tile-gallery__figure {
+  position: relative;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+}
+
+/* Layered images for sliding */
+.tile-gallery__image {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Roles */
+.tile-gallery__image.is-current { z-index: 2; transform: translate(-50%, -50%); }
+.tile-gallery__image.off-right { z-index: 1; transform: translate(150%, -50%); }
+
+/* Right-to-left slide only */
+.tile-gallery__image.slide-in-from-right { transition: transform 900ms ease; transform: translate(-50%, -50%); }
+.tile-gallery__image.slide-out-left { transition: transform 900ms ease; transform: translate(-150%, -50%); }
+
+/* Hover vignette */
+.tile-gallery__figure:after {
+  transition: opacity 250ms ease-in-out;
+  content: '';
+  position: absolute; inset: 0; z-index: 5;
+  box-shadow: 0 0 50px 0 rgba(0,0,0,1) inset;
+  opacity: 0;
+}
+.tile-gallery__figure:hover:after { opacity: 1; }
+.tile-gallery__row_responsive,.tile-gallery__col_responsive{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-direction: column;
+}
+
+/* Responsive */
+@media (max-width: 1200px) { .tile-gallery { transform: scale(0.95); } }
+@media (max-width: 1024px) {
+    
+  /* .tile-gallery { flex-direction: column; align-items: center; gap: 12px; }
+  .tile-gallery__col + .tile-gallery__col { margin-left: 0; } */
+
+  .tile-gallery { transform: scale(0.80);}
+}
+@media (max-width: 900px) {
+.tile-gallery{
+    transform: scale(1);
+    flex-direction: column !important;
+    justify-content: center;
+    align-items: center;
+    gap: 0px;
+}
+.tile-gallery__col_responsive{
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+.tile-gallery__row_responsive{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-direction: row;
+}
+
+.tile-gallery__tile { width: 305px; }
+.tile-gallery__tile--big { width: 620px;height: 380px; }
+.tile-gallery__tile--narrow { width: 300px;height: 150px;  }
+.tile-gallery__tile--normal { width: 300px;height: 150px;}
+
+}
+
+@media (max-width: 650px) {
+.tile-gallery{transform:scale(0.8);margin-top: -150px;}
+}
+@media (max-width: 500px) {
+
+
+  .hall-of-dapp { padding: 40px 0; }
+  .hall-of-dapp-heading { font-size: 2rem; margin-bottom: 28px; }
+
+
+  .tile-gallery{transform:scale(1);margin-top: 0px;}
+
+  .tile-gallery__tile { width: 205px; }
+  .tile-gallery__tile--big { width: 420px;height: 180px; }
+  .tile-gallery__tile--narrow { width: 200px;height: 100px;  }
+  .tile-gallery__tile--normal { width: 200px;height: 100px;}
+}
+
+@media (max-width: 430px) {
+  .tile-gallery{transform:scale(0.8);margin-top: -120px;}
+}
+
+/* Animations */
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes slideIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
