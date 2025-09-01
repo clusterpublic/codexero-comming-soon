@@ -5,7 +5,6 @@ import { supabase } from './supabase';
 import Confetti from './Confetti';
 import seiLogo from "./assets/sei_red_and_white.svg"
 import HallOfDapp from './components/HallOfDapp';
-import ConnectWallet from './components/ConnectWallet';
 
 function LoadingScreen({ onFinish }) {
   const [progress, setProgress] = useState(0);
@@ -382,7 +381,7 @@ function App() {
           </div>
         </div>
         <nav className="nav">
-          {/* <ConnectWallet /> */}
+          {/* <button className="connect-wallet-btn">Connect Wallet</button> */}
           <button className="get-started-btn" onClick={() => setWaitlistOpen(true)}>Get Early Access</button>
         </nav>
       </header>
