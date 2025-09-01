@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Block legal pages from search engines
+Disallow: /TOS
+Disallow: /PP
+
+# Sitemap (optional)
+# Sitemap: https://codexero.xyz/sitemap.xml
