@@ -6,6 +6,8 @@ import Confetti from './Confetti';
 import seiLogo from "./assets/sei_red_and_white.svg"
 import HallOfDapp from './components/HallOfDapp';
 import ConnectWallet from './components/ConnectWallet';
+import ToastTest from './components/ToastTest';
+
 
 function LoadingScreen({ onFinish }) {
   const [progress, setProgress] = useState(0);
@@ -382,7 +384,7 @@ function App() {
           </div>
         </div>
         <nav className="nav">
-          {/* <ConnectWallet /> */}
+          <ConnectWallet />
           <button className="get-started-btn" onClick={() => setWaitlistOpen(true)}>Get Early Access</button>
         </nav>
       </header>
@@ -483,6 +485,8 @@ function App() {
       {/* Hall of Dapp Section */}
       {/* <HallOfDapp /> */}
       
+      
+      {/* Toast Notifications - Now handled in main.jsx */}
       </div>
   );
 }
