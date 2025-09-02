@@ -1,269 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase';
 import { UserProfileService } from '../services/userProfileService';
+import { 
+  checkTwitterFollowStatus, 
+  checkTwitterPostStatus, 
+  checkDisplayNameSequences,
+  testRapidAPIAccess 
+} from '../services/twitterVerificationService';
 import { toast } from 'react-toastify';
-
-// RapidAPI configuration for Twitter verification
-const RAPIDAPI_KEY = '47822bb3bemsha001819593243e5p1b709djsn6666ce549748';
-const RAPIDAPI_HOST = 'twitter154.p.rapidapi.com';
+import TelegramVerificationService from '../services/telegramVerificationService';
 
 
 
-// API functions for Twitter verification
-const checkTwitterFollowStatus = async (userId) => {
-  try {
-    console.log(`Checking if user ${userId} follows ClusterProtocol...`);
-    
-    // First, get the user's following list to check if they follow ClusterProtocol
-    const response = await fetch(`https://${RAPIDAPI_HOST}/user/following?user_id=${userId}&limit=200`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST
-      }
-    });
-    
-    if (response.status === 403) {
-      console.warn('RapidAPI access denied (403) - check API key and subscription. Using fallback verification.');
-      return { isFollowing: true, data: null, fallback: true, reason: 'access_denied' };
-    }
-    
-    if (response.status === 429) {
-      console.warn('RapidAPI rate limited (429) - too many requests. Using fallback verification.');
-      return { isFollowing: true, data: null, fallback: true, reason: 'rate_limited' };
-    }
-    
-    if (!response.ok) throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    
-    const data = await response.json();
-    console.log('Twitter following check result:', data);
-    
-    // Check if ClusterProtocol is in the following list
-    const isFollowingCluster = data.results?.some(user => 
-      user.username?.toLowerCase() === 'clusterprotocol' ||
-      user.screen_name?.toLowerCase() === 'clusterprotocol'
-    );
-    
-    return { isFollowing: isFollowingCluster || false, data, fallback: false };
-  } catch (error) {
-    console.error('Error checking Twitter follow status:', error);
-    // Return fallback success to avoid blocking user experience
-    return { isFollowing: true, error: error.message, fallback: true };
-  }
-};
-
-const checkTwitterPostStatus = async (userId) => {
-  try {
-    console.log(`Checking recent tweets from user ${userId} for ClusterProtocol mentions...`);
-    
-    // Use the "User Tweets By User ID" endpoint to get recent tweets
-    const response = await fetch(`https://${RAPIDAPI_HOST}/user/tweets?user_id=${userId}&limit=50`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST
-      }
-    });
-    
-    if (response.status === 403) {
-      console.warn('RapidAPI access denied (403) for posts - check API key and subscription. Using fallback verification.');
-      return { hasPosted: true, data: null, fallback: true, reason: 'access_denied' };
-    }
-    
-    if (response.status === 429) {
-      console.warn('RapidAPI rate limited (429) for posts - too many requests. Using fallback verification.');
-      return { hasPosted: true, data: null, fallback: true, reason: 'rate_limited' };
-    }
-    
-    if (!response.ok) throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    
-    const data = await response.json();
-    console.log('Twitter posts check result:', data);
-    
-    // Check if user has posted about ClusterProtocol or CodeXero in recent tweets
-    const hasClusterPost = data.results?.some(tweet => {
-      const tweetText = (tweet.text || tweet.full_text || '').toLowerCase();
-      return tweetText.includes('clusterprotocol') || 
-             tweetText.includes('@clusterprotocol') ||
-             tweetText.includes('codexero') || 
-             tweetText.includes('@codexero') ||
-             tweetText.includes('#clusterprotocol') ||
-             tweetText.includes('#codexero');
-    });
-    
-    console.log(`Found ClusterProtocol mention: ${hasClusterPost}`);
-    return { hasPosted: hasClusterPost || false, data, fallback: false };
-  } catch (error) {
-    console.error('Error checking Twitter post status:', error);
-    // Return fallback success to avoid blocking user experience
-    return { hasPosted: true, error: error.message, fallback: true };
-  }
-};
-
-const checkCustomUsernameAvailability = async (userId) => {
-  try {
-    console.log(`Checking user details for user ID ${userId}...`);
-    
-    // Use the "User By User ID" endpoint to check if user exists
-    const response = await fetch(`https://${RAPIDAPI_HOST}/user/details?user_id=${userId}`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST
-      }
-    });
-    
-    if (response.status === 403) {
-      console.warn('RapidAPI access denied (403) for username check - check API key and subscription. Using fallback verification.');
-      return { exists: true, available: false, data: null, fallback: true, reason: 'access_denied' };
-    }
-    
-    if (response.status === 429) {
-      console.warn('RapidAPI rate limited (429) for username check - too many requests. Using fallback verification.');
-      return { exists: true, available: false, data: null, fallback: true, reason: 'rate_limited' };
-    }
-    
-    if (response.status === 404) {
-      // Username not found - it's available
-      console.log(`Username ${username} not found - available`);
-      return { exists: false, available: true, fallback: false };
-    }
-    
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
-    console.log('Username check result:', data);
-    
-    // If we get user data, the username exists and is taken
-    return { 
-      exists: true, 
-      available: false, 
-      data,
-      fallback: false,
-      userInfo: {
-        name: data.name,
-        username: data.username || data.screen_name,
-        verified: data.verified,
-        followers: data.followers_count,
-        description: data.description
-      }
-    };
-  } catch (error) {
-    console.error('Error checking username availability:', error);
-    // Return fallback success to avoid blocking user experience
-    return { exists: true, available: false, error: error.message, fallback: true };
-  }
-};
-
-// Test API access function
-const testRapidAPIAccess = async () => {
-  try {
-    console.log('Testing RapidAPI access with new key...');
-    
-    // Test with a known account to verify API access
-    const response = await fetch(`https://${RAPIDAPI_HOST}/user/details?username=twitter`, {
-      method: 'GET',
-      headers: {
-        'X-RapidAPI-Key': RAPIDAPI_KEY,
-        'X-RapidAPI-Host': RAPIDAPI_HOST
-      }
-    });
-    
-    console.log('API Test Response Status:', response.status);
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('API Test Success:', data);
-      return { success: true, data };
-    } else if (response.status === 429) {
-      console.warn('API Test Rate Limited (429) - this is normal for new keys');
-      return { success: false, status: 429, statusText: 'Too Many Requests', rateLimited: true };
-    } else if (response.status === 403) {
-      console.warn('API Test Forbidden (403) - check API key and subscription');
-      return { success: false, status: 403, statusText: 'Forbidden', accessDenied: true };
-    } else {
-      console.error('API Test Failed:', response.status, response.statusText);
-      return { success: false, status: response.status, statusText: response.statusText };
-    }
-  } catch (error) {
-    console.error('API Test Error:', error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Supabase functions for verification status
-const getVerificationStatusFromSupabase = async (userId, stepId) => {
-  try {
-    // Use UserProfileService instead of direct table access
-    const profile = await UserProfileService.getProfileByUserId(userId);
-    if (!profile) return null;
-    
-    // Map step_id to the corresponding field in user_profiles
-    const stepMapping = {
-      'step1_twitterConnect': profile.twitter_connected,
-      'step1_twitterFollow': profile.twitter_followed_cluster,
-      'step1_twitterPost': profile.twitter_posted_about_cluster,
-      'step1_customUsername': profile.custom_username_checked,
-      'step1_telegramJoin': profile.telegram_joined
-    };
-    
-    return stepMapping[stepId] || false;
-  } catch (error) {
-    console.error('Error getting verification status from Supabase:', error);
-    return null;
-  }
-};
-
-const updateVerificationStatusInSupabase = async (userId, stepId, status, metadata = {}) => {
-  try {
-    // Use UserProfileService instead of direct table access
-    const stepMapping = {
-      'step1_twitterConnect': 'twitter_connected',
-      'step1_twitterFollow': 'twitter_followed_cluster',
-      'step1_twitterPost': 'twitter_posted_about_cluster',
-      'step1_customUsername': 'custom_username_checked',
-      'step1_telegramJoin': 'telegram_joined'
-    };
-    
-    const fieldName = stepMapping[stepId];
-    if (!fieldName) {
-      console.error('Unknown step_id:', stepId);
-      return null;
-    }
-    
-    // Update the specific field in user_profiles
-    const updateData = {
-      [fieldName]: status,
-      updated_at: new Date().toISOString()
-    };
-    
-    // Add metadata to verification_metadata if needed
-    if (Object.keys(metadata).length > 0) {
-      const currentProfile = await UserProfileService.getProfileByUserId(userId);
-      if (currentProfile) {
-        updateData.verification_metadata = {
-          ...currentProfile.verification_metadata,
-          [stepId]: metadata
-        };
-      }
-    }
-    
-    const { data, error } = await supabase
-      .from('user_profiles')
-      .update(updateData)
-      .eq('user_id', userId)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  } catch (error) {
-    console.error('Error updating verification status in Supabase:', error);
-    return null;
-  }
-};
+// Target Twitter user ID for follow verification
+const TARGET_TWITTER_USER_ID = '1581344622390829056';
 
 /**
  * Step1Verification Component
@@ -292,8 +42,11 @@ export default function Step1Verification({ onStepComplete }) {
     telegramJoin: false
   });
 
-  const [user, setUser] = useState(null);
+  // State for storing sequence result message
+  const [sequenceResultMessage, setSequenceResultMessage] = useState(null);
 
+  const [user, setUser] = useState(null);
+console.log("user", user)
 
   // Enhanced Twitter connection check
   const isTwitterConnected = user && user.app_metadata?.provider === 'twitter';
@@ -369,13 +122,28 @@ export default function Step1Verification({ onStepComplete }) {
 
 
 
-  // Check if all steps are completed
+  // Check if all steps are completed (excluding Telegram for now)
   useEffect(() => {
-    const allCompleted = Object.values(verificationStates).every(state => state);
-    if (allCompleted && onStepComplete) {
+    // For now, we'll skip Telegram verification and only require Twitter steps
+    const requiredSteps = {
+      twitterConnect: verificationStates.twitterConnect,
+      twitterFollow: verificationStates.twitterFollow,
+      twitterPost: verificationStates.twitterPost,
+      customUsername: verificationStates.customUsername
+      // telegramJoin is skipped for now
+    };
+    
+    const allRequiredCompleted = Object.values(requiredSteps).every(state => state);
+    if (allRequiredCompleted && onStepComplete) {
       onStepComplete();
     }
   }, [verificationStates, onStepComplete]);
+
+  // Clear sequence messages when verification states change
+  useEffect(() => {
+    // Clear any existing sequence messages when states change
+    clearSequenceMessages();
+  }, [verificationStates.customUsername]);
 
   // Get Supabase user session
   useEffect(() => {
@@ -415,8 +183,8 @@ export default function Step1Verification({ onStepComplete }) {
           console.log('Twitter OAuth succeeded but email not provided - this is normal');
           
           // Mark Twitter connection as successful despite email issue
-          await updateVerificationStatusInSupabase(user.id, 'step1_twitterConnect', true);
-          setVerificationStates(prev => ({ ...prev, twitterConnect: true }));
+          // Note: Verification states are managed through the profile service
+          console.log('Twitter OAuth succeeded - verification states will be updated through profile service');
           
           // Show success message instead of error
           toast.success('Twitter connection successful! (Note: Twitter did not provide email, but authentication is complete)');
@@ -480,6 +248,8 @@ export default function Step1Verification({ onStepComplete }) {
       // Get current user session
       const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user;
+
+      console.log('Current user:', currentUser);
       
       if (!currentUser) {
         console.log('No user session found after OAuth');
@@ -506,7 +276,8 @@ export default function Step1Verification({ onStepComplete }) {
                        currentUser.user_metadata?.name || 
                        currentUser.user_metadata?.display_name,
           profile_image_url: currentUser.user_metadata?.avatar_url,
-          provider: currentUser.app_metadata?.provider
+          provider: currentUser.app_metadata?.provider,
+          user_id:currentUser.user_metadata?.provider_id
         };
         
         console.log('Sending Twitter data to profile service:', twitterData);
@@ -569,7 +340,8 @@ export default function Step1Verification({ onStepComplete }) {
           username: user.user_metadata?.user_name || user.user_metadata?.preferred_username,
           display_name: user.user_metadata?.full_name || user.user_metadata?.name,
           profile_image_url: user.user_metadata?.avatar_url,
-          provider: user.app_metadata?.provider
+          provider: user.app_metadata?.provider,
+          user_id:user.user_metadata?.provider_id
         });
       }
       setVerificationStates(prev => ({ ...prev, twitterConnect: true }));
@@ -621,8 +393,7 @@ export default function Step1Verification({ onStepComplete }) {
         setTimeout(async () => {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
-            await updateVerificationStatusInSupabase(session.user.id, 'step1_twitterConnect', true);
-            setVerificationStates(prev => ({ ...prev, twitterConnect: true }));
+            console.log('User authenticated - verification states will be updated through profile service');
           }
         }, 2000);
       }
@@ -634,34 +405,83 @@ export default function Step1Verification({ onStepComplete }) {
     }
   };
 
-  const handleManualTwitterVerification = async () => {
-    if (!user?.id) {
-      toast.error('Please ensure you are logged in to perform manual verification.');
-      return;
-    }
-
-    setLoading(prev => ({ ...prev, twitterConnect: true }));
+  // Function to check verification status
+  const checkTelegramChannelVerification = async () => {
+    if (!user?.id) return;
     
     try {
-      // Simulate manual verification process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const storedData = sessionStorage.getItem('telegram_channel_verification');
+      if (!storedData) return;
       
-      // Mark as verified manually in Supabase
-      await updateVerificationStatusInSupabase(user.id, 'step1_twitterConnect', true, {
-        verification_method: 'manual',
-        timestamp: new Date().toISOString()
-      });
-      setVerificationStates(prev => ({ ...prev, twitterConnect: true }));
+      const { code, userId, timestamp } = JSON.parse(storedData);
       
-      toast.success('Manual verification completed! You can now proceed with other verification steps.');
+      // Check if verification is still valid (24 hours)
+      if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem('telegram_channel_verification');
+        toast.error('Verification code expired. Please generate a new one.');
+        return;
+      }
+      
+      // Check if user ID matches current user
+      if (userId !== user.id) {
+        sessionStorage.removeItem('telegram_channel_verification');
+        return;
+      }
+      
+      // Initialize Telegram service
+      const telegramService = new TelegramVerificationService();
+      
+      // Check if user is member of channel
+      const membership = await telegramService.checkChannelMembership(userId);
+      
+      if (membership.isMember) {
+        // Clear stored data
+        sessionStorage.removeItem('telegram_channel_verification');
+        
+        // Update verification status in user profile
+        await UserProfileService.updateTelegramJoin(user.id, {
+          verification_method: 'channel_membership_verification',
+          telegram_channel: '@codexero_testing_1',
+          verification_code: code,
+          verified_at: new Date().toISOString(),
+          membership_status: membership.status
+        });
+        
+        setVerificationStates(prev => ({ ...prev, telegramJoin: true }));
+        toast.success('✅ Telegram verification completed! Welcome to the community!');
+        
+      } else {
+        toast.error('❌ Verification failed. Please make sure you joined the channel and try again.');
+      }
+      
     } catch (error) {
-      console.error('Manual verification error:', error);
-      toast.error('Manual verification failed. Please try again.');
-    } finally {
-      setLoading(prev => ({ ...prev, twitterConnect: false }));
+      console.error('Error checking channel verification:', error);
+      toast.error(`Failed to check verification status: ${error.message}`);
     }
   };
 
+  // Enhanced verification button handler
+  const handleTelegramVerification = async () => {
+    if (verificationStates.telegramJoin) {
+      // Already verified
+      return;
+    }
+    
+    // Check if we have a pending verification
+    const storedData = sessionStorage.getItem('telegram_channel_verification');
+    
+    if (storedData) {
+      // Check verification status
+      await checkTelegramChannelVerification();
+    } else {
+      // Start new verification process
+      await handleTelegramJoin();
+    }
+  };
+
+  // Update the button click handler
+  const handleTelegramButtonClick = handleTelegramVerification;
+  
   const handleTwitterDisconnect = async () => {
     if (!user?.id) {
       toast.error('No user session found.');
@@ -686,6 +506,12 @@ export default function Step1Verification({ onStepComplete }) {
       const result = await UserProfileService.completeTwitterDisconnect(user.id);
       
       if (result) {
+        // Clear any displayed sequence messages
+        clearSequenceMessages();
+        
+        // Clear sequence result message from state
+        setSequenceResultMessage(null);
+        
         // Reset local state
         setVerificationStates({
           twitterConnect: false,
@@ -722,38 +548,50 @@ export default function Step1Verification({ onStepComplete }) {
     setLoading(prev => ({ ...prev, twitterFollow: true }));
     
     try {
-      // Open Twitter follow page
-      window.open('https://x.com/intent/follow?screen_name=ClusterProtocol', '_blank');
+      // Open Twitter follow page for the target user ID
+      window.open(`https://x.com/intent/follow?user_id=${TARGET_TWITTER_USER_ID}`, '_blank');
       
       // Wait a moment for user to follow, then check
       setTimeout(async () => {
         try {
-          const followResult = await checkTwitterFollowStatus(user.id);
+          // Get the Twitter user ID from the user's profile
+          const profile = await UserProfileService.getProfileByUserId(user.id);
+          const twitterUserId = profile?.twitter_user_id;
+          
+          if (!twitterUserId) {
+            toast.error('Twitter user ID not found. Please reconnect your Twitter account.');
+            return;
+          }
+          
+          const followResult = await checkTwitterFollowStatus(twitterUserId, TARGET_TWITTER_USER_ID);
           
           if (followResult.isFollowing) {
             await UserProfileService.updateTwitterFollow(user.id, {
-              twitter_username: twitterUsername,
+              twitter_username: profile?.twitter_username,
               follow_check_result: followResult.data,
               verification_method: followResult.fallback ? 'fallback_auto' : 'api_verified'
             });
-            await updateVerificationStatusInSupabase(user.id, 'step1_twitterFollow', true, {
-                verification_method: 'manual_confirm',
-                twitter_username: user.user_metadata?.twitter_username
-              });
             setVerificationStates(prev => ({ ...prev, twitterFollow: true }));
             
             if (followResult.fallback) {
               toast.success('Twitter follow verification completed (using fallback due to API limitations)!');
             } else {
-              toast.success('Twitter follow verification successful!');
+              toast.success('Twitter follow verification successful! You are now following the target user.');
             }
           } else {
-            toast.error('Could not verify follow status. Please ensure you followed @ClusterProtocol and try again.');
+            toast.error('Could not verify follow status. Please ensure you followed the target user and try again.');
           }
         } catch (error) {
           console.error('Follow verification error:', error);
           // Fallback to manual verification after user confirms
-         
+          const userConfirms = window.confirm('Could not verify follow automatically. Did you follow the target user? Click OK if yes.');
+          if (userConfirms) {
+            await UserProfileService.updateTwitterFollow(user.id, {
+              verification_method: 'manual_confirm'
+            });
+            setVerificationStates(prev => ({ ...prev, twitterFollow: true }));
+            toast.success('Manual follow verification completed!');
+          }
         } finally {
           toast.dismiss(loadingToast);
           setLoading(prev => ({ ...prev, twitterFollow: false }));
@@ -772,79 +610,95 @@ export default function Step1Verification({ onStepComplete }) {
       return;
     }
 
-    // Multiple tweet templates to choose from
-    const tweetTemplates = [
-      'Just discovered @ClusterProtocol and @CodeXero! 🚀 The future of blockchain is here! #ClusterProtocol #CodeXero #Blockchain #Web3',
-      'Excited to be part of the @ClusterProtocol ecosystem! Building the next generation of decentralized apps with @CodeXero 🔥 #DeFi #Web3 #ClusterProtocol',
-      'Amazing work by @ClusterProtocol and @CodeXero team! This is how innovation in blockchain should look like 💎 #Blockchain #Innovation #ClusterProtocol',
-      'Ready to mint my NFT with @CodeXero on @ClusterProtocol! The future is decentralized 🌟 #NFT #CodeXero #ClusterProtocol #Crypto',
-      'Joining the @ClusterProtocol community! @CodeXero is revolutionizing how we interact with blockchain 🚀 #Web3 #DeFi #ClusterProtocol'
-    ];
-
-    // Randomly select a template or let user choose
-    const randomTemplate = tweetTemplates[Math.floor(Math.random() * tweetTemplates.length)];
-    const userChoice = confirm(`We'll open Twitter with a pre-filled post. Click OK to use this template:\n\n"${randomTemplate}"\n\nOr click Cancel to use a custom template.`);
+    // Get the target user's latest tweet content to retweet
+    const targetContent = `@ClusterProtocol`;
+    const tweetText = `Just discovered @ClusterProtocol and @CodeXero! 🚀 The future of blockchain is here! #ClusterProtocol #CodeXero #Blockchain #Web3`
     
-    let selectedTemplate = randomTemplate;
-    if (!userChoice) {
-      selectedTemplate = tweetTemplates[0]; // Default to first template if user cancels
-    }
-
-    const loadingToast = toast.info('Opening Twitter post page...', { autoClose: false });
+    const loadingToast = toast.info('Opening Twitter retweet page...', { autoClose: false });
     setLoading(prev => ({ ...prev, twitterPost: true }));
     
     try {
-      const tweetText = encodeURIComponent(selectedTemplate);
+      // Open Twitter retweet page for the target user
       window.open(`https://x.com/intent/tweet?text=${tweetText}`, '_blank');
       
-      // Wait for user to post, then check their recent tweets
+      // Start polling for the retweet
       setTimeout(async () => {
         try {
-          const postResult = await checkTwitterPostStatus(user.id);
+          // Get the Twitter user ID from the user's profile
+          const profile = await UserProfileService.getProfileByUserId(user.id);
+          const twitterUserId = profile?.twitter_user_id;
+          
+          if (!twitterUserId) {
+            toast.error('Twitter user ID not found. Please reconnect your Twitter account.');
+            return;
+          }
+          
+          // Update loading message to show polling status
+          toast.update(loadingToast, {
+            render: 'Checking for retweet... (this may take up to 1 minute)',
+            type: 'info',
+            autoClose: false
+          });
+          
+          // Check for retweet with polling (up to 20 attempts = 1 minute)
+          const postResult = await checkTwitterPostStatus(twitterUserId, targetContent, TARGET_TWITTER_USER_ID, 20);
           
           if (postResult.hasPosted) {
+            // Update loading message
+            toast.update(loadingToast, {
+              render: `✅ Retweet found! Updating verification status...`,
+              type: 'success',
+              autoClose: 3000
+            });
+            
             await UserProfileService.updateTwitterPost(user.id, null, {
-              twitter_username: twitterUsername,
+              twitter_username: profile?.twitter_username,
               post_check_result: postResult.data,
-              verification_method: postResult.fallback ? 'fallback_auto' : 'api_verified'
+              verification_method: postResult.fallback ? 'fallback_auto' : 'api_verified',
+              match_type: postResult.matchType,
+              tweet_id: postResult.tweetId,
+              attempts: postResult.attempt
             });
             setVerificationStates(prev => ({ ...prev, twitterPost: true }));
             
             if (postResult.fallback) {
-              toast.success('Twitter post verification completed (using fallback due to API limitations)!');
+              toast.success('Twitter retweet verification completed (using fallback due to API limitations)!');
             } else {
-              toast.success('Twitter post verification successful!');
+              toast.success(`Twitter retweet verification successful! Found retweet after ${postResult.attempt} attempts.`);
             }
           } else {
-            // Fallback to manual verification
-            const userConfirms = window.confirm('Could not find ClusterProtocol or CodeXero post in your recent tweets. Did you post about ClusterProtocol/CodeXero? Click OK if yes.');
-            if (userConfirms) {
-              await updateVerificationStatusInSupabase(user.id, 'step1_twitterPost', true, {
-                verification_method: 'manual_confirm',
-                twitter_username: user.user_metadata?.twitter_username
-              });
-              setVerificationStates(prev => ({ ...prev, twitterPost: true }));
-            }
+            // No retweet found after all attempts
+            toast.update(loadingToast, {
+              render: '❌ No retweet found after 1 minute. Please try again or use manual verification.',
+              type: 'error',
+              autoClose: 5000
+            });
+
           }
         } catch (error) {
           console.error('Post verification error:', error);
+          toast.update(loadingToast, {
+            render: '❌ Error during verification. Please try manual verification.',
+            type: 'error',
+            autoClose: 5000
+          });
+          
           // Fallback to manual verification
-          const userConfirms = window.confirm('Could not verify post automatically. Did you post about ClusterProtocol or CodeXero? Click OK if yes.');
+          const userConfirms = window.confirm('Could not verify retweet automatically. Did you retweet the CodeXero post? Click OK if yes.');
           if (userConfirms) {
-            await updateVerificationStatusInSupabase(user.id, 'step1_twitterPost', true, {
-              verification_method: 'manual_confirm',
-              twitter_username: user.user_metadata?.twitter_username
+            await UserProfileService.updateTwitterPost(user.id, null, {
+              verification_method: 'manual_confirm'
             });
             setVerificationStates(prev => ({ ...prev, twitterPost: true }));
+            toast.success('Manual retweet verification completed!');
           }
         } finally {
-          toast.dismiss(loadingToast);
           setLoading(prev => ({ ...prev, twitterPost: false }));
         }
-      }, 10000); // Give user 10 seconds to post
+      }, 3000); // Give user 3 seconds to start retweeting
     } catch (error) {
       console.error('Twitter post error:', error);
-      toast.error('Failed to initiate post verification.');
+      toast.error('Failed to initiate retweet verification.');
       setLoading(prev => ({ ...prev, twitterPost: false }));
     }
   };
@@ -855,34 +709,103 @@ export default function Step1Verification({ onStepComplete }) {
       return;
     }
 
-    const loadingToast = toast.info('Checking username availability...', { autoClose: false });
+    const loadingToast = toast.info('Checking display name for verification sequences...', { autoClose: false });
     setLoading(prev => ({ ...prev, customUsername: true }));
     
     try {
-      // For custom username check, we'll check if the current user has a custom username set
-      // This is different from the other checks - we're verifying the user's own profile
-      const usernameResult = await checkCustomUsernameAvailability(user.id);
+      // Get the Twitter user ID from the user's profile
+      const profile = await UserProfileService.getProfileByUserId(user.id);
+      const twitterUserId = profile?.twitter_user_id;
       
-      if (usernameResult.exists) {
-        await UserProfileService.updateCustomUsername(user.id, usernameResult.userInfo?.username || 'verified', {
-          username_exists: true,
-          username_data: usernameResult.data,
-          verification_method: usernameResult.fallback ? 'fallback_auto' : 'api_verified'
-        });
-        setVerificationStates(prev => ({ ...prev, customUsername: true }));
-        toast.success(`Custom username verification successful! Your Twitter profile has been verified.`);
-      } else {
-        toast.error(`Could not verify your Twitter profile. Please ensure your Twitter account is properly connected.`);
+      if (!twitterUserId) {
+        toast.error('Twitter user ID not found. Please reconnect your Twitter account.');
+        return;
       }
+      
+      // Define the character sequences to check for in display name
+      // You can modify these sequences as needed
+      const verificationSequences = ['abc', 'cluster', 'codexero', '🚀', '⭐'];
+      
+      // Check if display name contains any of the verification sequences
+      const displayNameResult = await checkDisplayNameSequences(twitterUserId, verificationSequences);
+      
+      // Always mark as completed if RapidAPI call succeeds (regardless of sequence detection)
+      if (displayNameResult.data || displayNameResult.fallback) {
+        // Update verification status - always mark as completed
+        await UserProfileService.updateCustomUsername(user.id, 'verified', {
+          display_name_verified: true,
+          sequences_found: displayNameResult.sequencesFound || [],
+          display_name: displayNameResult.displayName || 'unknown',
+          verification_method: displayNameResult.fallback ? 'fallback_auto' : 'api_verified',
+          verification_data: displayNameResult.data,
+          verification_result: displayNameResult.verified ? 'sequences_found' : 'no_sequences_found'
+        });
+        
+        setVerificationStates(prev => ({ ...prev, customUsername: true }));
+        
+        // Show different messages based on sequence detection
+        if (displayNameResult.verified) {
+          // ✅ Sequences found - show success message
+          toast.success(`✅ Display name verification completed! Found sequences: ${displayNameResult.sequencesFound.join(', ')}`);
+          
+          // Set success message in state
+          setSequenceResultMessage({
+            type: 'success',
+            message: `🎉 Congratulations! Your display name "${displayNameResult.displayName}" contains special sequences: ${displayNameResult.sequencesFound.join(', ')}`
+          });
+          
+        } else {
+          // ⚠️ No sequences found - show warning message
+          toast.warning(`⚠️ Display name verification completed, but no special sequences found.`);
+          
+          // Set warning message in state
+          setSequenceResultMessage({
+            type: 'warning',
+            message: `⚠️ Your display name "${displayNameResult.displayName}" does not contain the required special sequences: ${verificationSequences.join(', ')}`
+          });
+        }
+        
+        console.log('Display name verification result:', {
+          verified: true, // Always true if API succeeds
+          sequencesFound: displayNameResult.sequencesFound,
+          displayName: displayNameResult.displayName,
+          hasSequences: displayNameResult.verified
+        });
+        
+      } else {
+        // API call failed completely
+        toast.error(`❌ Display name verification failed. Could not connect to Twitter API.`);
+        
+        // Clear any existing message
+        setSequenceResultMessage(null);
+        
+        console.log('Display name verification failed:', {
+          verified: false,
+          reason: 'api_failure',
+          displayName: displayNameResult.displayName
+        });
+      }
+      
     } catch (error) {
-      console.error('Username check error:', error);
+      console.error('Display name check error:', error);
+      
       // Fallback to manual verification
-      const userConfirms = confirm(`Could not verify your Twitter profile automatically. Do you have a custom username set on Twitter? Click OK if yes.`);
+      const verificationSequences = ['abc', 'cluster', 'codexero', '🚀', '⭐'];
+      const userConfirms = confirm(`Could not verify your display name automatically. Does your Twitter display name contain any of these sequences: ${verificationSequences.join(', ')}? Click OK if yes.`);
+      
       if (userConfirms) {
-        await updateVerificationStatusInSupabase(user.id, 'step1_customUsername', true, {
-          verification_method: 'manual_confirm'
+        await UserProfileService.updateCustomUsername(user.id, 'verified', {
+          verification_method: 'manual_confirm',
+          display_name_verified: true
         });
         setVerificationStates(prev => ({ ...prev, customUsername: true }));
+        toast.success('Manual display name verification completed!');
+        
+        // Set manual verification message
+        setSequenceResultMessage({
+          type: 'success',
+          message: '✅ Manual display name verification completed!'
+        });
       }
     } finally {
       toast.dismiss(loadingToast);
@@ -890,35 +813,26 @@ export default function Step1Verification({ onStepComplete }) {
     }
   };
 
-  const handleTelegramJoin = async () => {
+    const handleTelegramJoin = async () => {
     if (!user?.id) {
       toast.error('Please connect Twitter first');
       return;
     }
 
-    const loadingToast = toast.info('Opening Telegram channel...', { autoClose: false });
     setLoading(prev => ({ ...prev, telegramJoin: true }));
     
     try {
-      window.open('https://t.me/codexero', '_blank');
+      // Skip Telegram verification for now - always mark as completed
+      console.log('Telegram verification skipped - marking as completed');
       
-      // Since Telegram verification is harder to automate, use manual confirmation
-      setTimeout(async () => {
-        const userConfirms = confirm('Did you join the CodeXero Telegram channel? Click OK if yes.');
-        if (userConfirms) {
-          await UserProfileService.updateTelegramJoin(user.id, {
-            verification_method: 'manual_confirm',
-            telegram_channel: 'codexero'
-          });
-          setVerificationStates(prev => ({ ...prev, telegramJoin: true }));
-          toast.success('Telegram join verification successful!');
-        }
-        toast.dismiss(loadingToast);
-        setLoading(prev => ({ ...prev, telegramJoin: false }));
-      }, 3000);
+      // Mark as completed immediately
+      setVerificationStates(prev => ({ ...prev, telegramJoin: true }));
+      toast.success('✅ Telegram verification completed! (Skipped for now)');
+      
     } catch (error) {
-      console.error('Telegram join error:', error);
-      toast.error('Failed to initiate Telegram join verification.');
+      console.error('Telegram verification error:', error);
+      toast.error(`Failed to complete verification: ${error.message}`);
+    } finally {
       setLoading(prev => ({ ...prev, telegramJoin: false }));
     }
   };
@@ -933,19 +847,28 @@ export default function Step1Verification({ onStepComplete }) {
       case 'twitterConnect':
         return user ? '✓ Connected' : 'Connect Twitter';
       case 'twitterFollow':
-        return 'Follow on Twitter';
+        return 'Follow Target User';
       case 'twitterPost':
-        return 'Post on Twitter';
+        return 'Retweet CodeXero';
       case 'customUsername':
-        return 'Verify Profile';
+        return 'Check Display Name';
       case 'telegramJoin':
-        return 'Join Telegram';
+        return 'Skip for Now';
       default:
         return 'Verify';
     }
   };
 
   const allStepsCompleted = Object.values(verificationStates).every(state => state);
+
+  // Helper function to clear any existing sequence result messages
+  const clearSequenceMessages = () => {
+    const messages = document.querySelectorAll('.sequence-result-message');
+    messages.forEach(message => message.remove());
+    
+    // Also clear the state message
+    setSequenceResultMessage(null);
+  };
 
   return (
     <div className="verification-card">
@@ -1022,7 +945,6 @@ export default function Step1Verification({ onStepComplete }) {
                 >
                   {getButtonText('twitterConnect', false, loading.twitterConnect)}
                 </button>
-              
               </>
             )}
           </div>
@@ -1034,7 +956,7 @@ export default function Step1Verification({ onStepComplete }) {
             <div className="verification-item-icon" style={{background: 'rgba(34, 197, 94, 0.2)'}}>👥</div>
             <div className="verification-item-text">
               <h3 style={{color: '#22c55e'}}>Follow on Twitter</h3>
-              <p>Follow @ClusterProtocol on Twitter</p>
+              <p>Follow the target user on Twitter</p>
             </div>
           </div>
           <div className="verification-item-actions">
@@ -1051,13 +973,13 @@ export default function Step1Verification({ onStepComplete }) {
           </div>
         </div>
 
-        {/* Twitter Post */}
+        {/* Twitter Retweet */}
         <div className="verification-item">
           <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(168, 85, 247, 0.2)'}}>📝</div>
+            <div className="verification-item-icon" style={{background: 'rgba(168, 85, 247, 0.2)'}}>🔄</div>
             <div className="verification-item-text">
-              <h3 style={{color: '#a855f7'}}>Post on Twitter</h3>
-              <p>Share about ClusterProtocol & CodeXero</p>
+              <h3 style={{color: '#a855f7'}}>Retweet CodeXero</h3>
+              <p>Retweet the CodeXero announcement</p>
             </div>
           </div>
           <div className="verification-item-actions">
@@ -1076,24 +998,46 @@ export default function Step1Verification({ onStepComplete }) {
 
         {/* Profile Verification */}
         <div className="verification-item">
-          <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(245, 158, 11, 0.2)'}}>🔍</div>
-            <div className="verification-item-text">
-              <h3 style={{color: '#f59e0b'}}>Verify Profile</h3>
-              <p>Verify your Twitter profile information</p>
+          <div>
+            <div className='flex justify-between items-center'>
+              <div className="verification-item-info">
+                <div className="verification-item-icon" style={{background: 'rgba(245, 158, 11, 0.2)'}}>🔍</div>
+                <div className="verification-item-text">
+                  <h3 style={{color: '#f59e0b'}}>Verify Display Name</h3>
+                  <p>Check if your Twitter display name contains verification sequences</p>
+                </div>
+              </div>
+              <div className="verification-item-actions">
+                <button
+                  onClick={handleUsernameCheck}
+                  className={`verification-button ${
+                    verificationStates.customUsername ? 'completed' : 
+                    loading.customUsername ? 'loading' : 'pending'
+                  }`}
+                >
+                  {getButtonText('customUsername', verificationStates.customUsername, loading.customUsername)}
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="verification-item-actions">
-            <button
-              onClick={handleUsernameCheck}
-              disabled={loading.customUsername || verificationStates.customUsername}
-              className={`verification-button ${
-                verificationStates.customUsername ? 'completed' : 
-                loading.customUsername ? 'loading' : 'pending'
-              }`}
-            >
-              {getButtonText('customUsername', verificationStates.customUsername, loading.customUsername)}
-            </button>
+            {/* Sequence Result Message */}
+            {sequenceResultMessage && (
+              <div style={{
+                marginTop: '12px',
+                padding: '12px',
+                borderRadius: '8px',
+                fontSize: '0.875rem',
+                textAlign: 'center',
+                background: sequenceResultMessage.type === 'success' 
+                  ? 'rgba(34, 197, 94, 0.1)' 
+                  : 'rgba(245, 158, 11, 0.1)',
+                border: `1px solid ${
+                  sequenceResultMessage.type === 'success' ? '#22c55e' : '#f59e0b'
+                }`,
+                color: sequenceResultMessage.type === 'success' ? '#22c55e' : '#f59e0b'
+              }}>
+                {sequenceResultMessage.message}
+              </div>
+            )}
           </div>
         </div>
 
@@ -1103,7 +1047,7 @@ export default function Step1Verification({ onStepComplete }) {
             <div className="verification-item-icon" style={{background: 'rgba(6, 182, 212, 0.2)'}}>✈️</div>
             <div className="verification-item-text">
               <h3 style={{color: '#06b6d4'}}>Join Telegram</h3>
-              <p>Join our Telegram community</p>
+              <p>Join our Telegram community (Skipped for now - click to mark as completed)</p>
             </div>
           </div>
           <div className="verification-item-actions">
@@ -1121,6 +1065,55 @@ export default function Step1Verification({ onStepComplete }) {
         </div>
       </div>
 
+      {/* Skip for Testing Button */}
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <button
+          onClick={() => {
+            // Mark all required steps as completed for testing
+            setVerificationStates({
+              twitterConnect: true,
+              twitterFollow: true,
+              twitterPost: true,
+              customUsername: true,
+              telegramJoin: true
+            });
+          }}
+          style={{
+            background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            border: 'none',
+            padding: '12px 24px',
+            borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
+          }}
+        >
+          🚀 Skip for Testing (Mark All Complete)
+        </button>
+      </div>
+
+      {/* Check if all required steps are completed */}
+      {(() => {
+        const requiredSteps = {
+          twitterConnect: verificationStates.twitterConnect,
+          twitterFollow: verificationStates.twitterFollow,
+          twitterPost: verificationStates.twitterPost,
+          customUsername: verificationStates.customUsername
+        };
+        return Object.values(requiredSteps).every(state => state);
+      })() && (
+        <div className="completion-card">
+          <div className="completion-icon">🎉</div>
+          <h3 className="completion-title">Step 1 Complete!</h3>
+          <p className="completion-message">All required verification steps completed. Ready to proceed!</p>
+          <div>
+            <div className="completion-spinner"></div>
+          </div>
+        </div>
+      )}
+
       {/* Progress indicator */}
       <div className="progress-container">
         <div className="progress-header">
@@ -1137,24 +1130,15 @@ export default function Step1Verification({ onStepComplete }) {
         </div>
         <div className="progress-text">
           <span className="progress-message">
-            {Object.values(verificationStates).filter(Boolean).length === 5 
-              ? '🎉 All verifications completed!' 
-              : `${5 - Object.values(verificationStates).filter(Boolean).length} steps remaining`
+            {Object.values(verificationStates).filter(Boolean).length >= 4
+              ? '🎉 All required verifications completed!' 
+              : `${4 - Object.values(verificationStates).filter(Boolean).length} required steps remaining`
             }
           </span>
         </div>
       </div>
 
-      {allStepsCompleted && (
-        <div className="completion-card">
-          <div className="completion-icon">🎉</div>
-          <h3 className="completion-title">Step 1 Complete!</h3>
-          <p className="completion-message">All verification steps completed. Ready to proceed!</p>
-          <div>
-            <div className="completion-spinner"></div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }

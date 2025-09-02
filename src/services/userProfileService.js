@@ -59,7 +59,7 @@ export class UserProfileService {
         const profileData = {
           user_id: userId,
           wallet_address: null, // Will be set when wallet connects
-          twitter_user_id: twitterData.id,
+          twitter_user_id: twitterData.user_id,
           twitter_username: twitterData.username,
           twitter_display_name: twitterData.display_name || twitterData.name,
           twitter_profile_image: twitterData.profile_image_url,
@@ -96,7 +96,7 @@ export class UserProfileService {
         
         // Update existing profile
         const updateData = {
-          twitter_user_id: twitterData.id,
+          twitter_user_id: twitterData.user_id,
           twitter_username: twitterData.username,
           twitter_display_name: twitterData.display_name || twitterData.name,
           twitter_profile_image: twitterData.profile_image_url,
@@ -128,10 +128,8 @@ export class UserProfileService {
         profile = data;
       }
 
-      // Check for special name in display name
-      if (twitterData.display_name || twitterData.name) {
-        await this.checkAndUpdateSpecialName(profile.id, twitterData.display_name || twitterData.name);
-      }
+      // Note: Special name checking is now only done when user explicitly verifies display name
+      // This prevents automatic verification on Twitter connection
 
       console.log('Final profile result:', profile);
       return profile;
@@ -168,6 +166,15 @@ export class UserProfileService {
           twitter_posted_at: null,
           twitter_post_url: null,
           
+          // Reset ALL verification fields that depend on Twitter connection
+          custom_username_checked: false,
+          custom_username: null,
+          custom_username_verified_at: null,
+          special_name_exists: false,
+          special_name: null,
+          telegram_joined: false,
+          telegram_joined_at: null,
+          
           // Reset overall completion status (will be recalculated by trigger)
           all_steps_completed: false,
           completed_at: null,
@@ -176,7 +183,13 @@ export class UserProfileService {
           verification_metadata: {
             ...currentProfile.verification_metadata,
             twitter_disconnected_at: new Date().toISOString(),
-            disconnect_reason: 'user_requested'
+            disconnect_reason: 'user_requested',
+            verifications_reset: {
+              custom_username: false,
+              special_name: false,
+              telegram_joined: false,
+              reset_at: new Date().toISOString()
+            }
           },
           
           updated_at: new Date().toISOString()
@@ -187,7 +200,7 @@ export class UserProfileService {
 
       if (error) throw error;
 
-      console.log('Twitter disconnected successfully');
+      console.log('Twitter disconnected successfully - all verification fields reset');
       return data;
     } catch (error) {
       console.error('Error disconnecting Twitter:', error);
@@ -309,8 +322,8 @@ export class UserProfileService {
 
       if (error) throw error;
 
-      // Check for special name in custom username
-      await this.checkAndUpdateSpecialName(data.id, customUsername);
+      // Note: Special name checking is now only done when explicitly verifying display name
+      // This prevents automatic verification on custom username updates
 
       return data;
     } catch (error) {
