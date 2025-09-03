@@ -25,7 +25,7 @@ const TARGET_TWITTER_USER_ID = '1581344622390829056';
  * - Prevents other verification steps until Twitter is properly connected
  * - Includes fallback manual verification option
  */
-export default function Step1Verification({ onStepComplete }) {
+export default function Step1Verification({ onVerificationComplete }) {
   const [verificationStates, setVerificationStates] = useState({
     twitterConnect: false,
     twitterFollow: false,
@@ -134,10 +134,10 @@ console.log("user", user)
     };
     
     const allRequiredCompleted = Object.values(requiredSteps).every(state => state);
-    if (allRequiredCompleted && onStepComplete) {
-      onStepComplete();
-    }
-  }, [verificationStates, onStepComplete]);
+      if (allRequiredCompleted && onVerificationComplete) {
+    onVerificationComplete();
+  }
+  }, [verificationStates, onVerificationComplete]);
 
   // Clear sequence messages when verification states change
   useEffect(() => {
@@ -871,202 +871,236 @@ console.log("user", user)
   };
 
   return (
-    <div className="verification-card">
-      <div className="verification-header">
-        <div className="verification-icon">
-          <div className="text-3xl">🔐</div>
-        </div>
-        <h2 className="verification-title">
-          Step 1: Social Verification
-        </h2>
-        <p className="verification-subtitle">Complete all verification steps to proceed to minting</p>
-        
-
-      </div>
+    <div className="max-w-4xl mx-auto">
+   
       
       <div>
         {/* Twitter Connect */}
-        <div className="verification-item">
-          <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(59, 130, 246, 0.2)'}}>🐦</div>
-            <div className="verification-item-text">
-              <h3 style={{color: '#3b82f6'}}>Connect Twitter</h3>
-              <p>Connect your Twitter account</p>
-              {!isFullyTwitterVerified && (
-                <div style={{fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem'}}>
-                  {user && !isFullyTwitterVerified ? (
-                    <span style={{color: '#f59e0b'}}>⚠️ Connected via {user.app_metadata?.provider || 'unknown'} - need Twitter</span>
-                  ) : (
-                    <span>Having OAuth issues? Try manual verification</span>
+        <div className="mb-8 p-8 bg-gradient-to-r from-blue-50/80 to-indigo-50/80 rounded-2xl border border-blue-200/50 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full border border-blue-400/30 flex items-center justify-center">
+                  <span className="text-2xl">🐦</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-blue-800 mb-2">Connect Twitter</h3>
+                  <p className="text-gray-700 mb-2">Connect your Twitter account to proceed with verification</p>
+                  {!isFullyTwitterVerified && (
+                    <div className="text-sm text-gray-600">
+                      {user && !isFullyTwitterVerified ? (
+                        <span className="inline-flex items-center px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-medium">
+                          ⚠️ Connected via {user.app_metadata?.provider || 'unknown'} - need Twitter
+                        </span>
+                      ) : (
+                        <span className="text-blue-600">Having OAuth issues? Try manual verification</span>
+                      )}
+                    </div>
+                  )}
+                  {isFullyTwitterVerified && (
+                    <div className="inline-flex items-center px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                      ✅ Twitter connected: {user.user_metadata?.twitter_username || user.user_metadata?.full_name || 'Verified'}
+                    </div>
                   )}
                 </div>
-              )}
-              {isFullyTwitterVerified && (
-                <div style={{fontSize: '0.75rem', color: '#10b981', marginTop: '0.25rem'}}>
-                  ✅ Twitter connected: {user.user_metadata?.twitter_username || user.user_metadata?.full_name || 'Verified'}
-                </div>
-              )}
+              </div>
             </div>
-          </div>
-          <div className="verification-item-actions">
-            {isFullyTwitterVerified ? (
-              <>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              {isFullyTwitterVerified ? (
+                <>
+                  <button
+                    onClick={handleTwitterConnect}
+                    disabled={true}
+                    className="px-6 py-3 bg-green-500 text-white rounded-xl font-semibold cursor-not-allowed opacity-60"
+                  >
+                    {getButtonText('twitterConnect', isFullyTwitterVerified, loading.twitterConnect)}
+                  </button>
+                  <button
+                    onClick={handleOAuthSuccess}
+                    disabled={loading.twitterConnect}
+                    className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg"
+                    title="Refresh Twitter connection status"
+                  >
+                    Refresh Status
+                  </button>
+                  <button
+                    onClick={handleTwitterDisconnect}
+                    disabled={loading.twitterConnect}
+                    className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg"
+                  >
+                    {loading.twitterConnect ? 'Disconnecting...' : 'Disconnect'}
+                  </button>
+                </>
+              ) : (
                 <button
                   onClick={handleTwitterConnect}
-                  disabled={true}
-                  className="verification-button completed"
-                >
-                  {getButtonText('twitterConnect', isFullyTwitterVerified, loading.twitterConnect)}
-                </button>
-                <button
-                  onClick={handleOAuthSuccess}
                   disabled={loading.twitterConnect}
-                  className="verification-button secondary"
-                  title="Refresh Twitter connection status"
-                >
-                  Refresh Status
-                </button>
-                <button
-                  onClick={handleTwitterDisconnect}
-                  disabled={loading.twitterConnect}
-                  className="verification-button disconnect"
-                >
-                  {loading.twitterConnect ? 'Disconnecting...' : 'Disconnect'}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={handleTwitterConnect}
-                  disabled={loading.twitterConnect}
-                  className={`verification-button ${
-                    loading.twitterConnect ? 'loading' : 'pending'
+                  className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                    loading.twitterConnect
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white hover:shadow-xl hover:scale-105 transform'
                   }`}
                 >
                   {getButtonText('twitterConnect', false, loading.twitterConnect)}
                 </button>
-              </>
-            )}
+              )}
+            </div>
           </div>
         </div>
 
         {/* Twitter Follow */}
-        <div className="verification-item">
-          <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(34, 197, 94, 0.2)'}}>👥</div>
-            <div className="verification-item-text">
-              <h3 style={{color: '#22c55e'}}>Follow on Twitter</h3>
-              <p>Follow the target user on Twitter</p>
+        <div className="mb-8 p-8 bg-gradient-to-r from-green-50/80 to-emerald-50/80 rounded-2xl border border-green-200/50 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-400/20 to-emerald-500/20 rounded-full border border-green-400/30 flex items-center justify-center">
+                  <span className="text-2xl">👥</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-green-800 mb-2">Follow on Twitter</h3>
+                  <p className="text-gray-700 mb-2">Follow the target user on Twitter to complete this verification step</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="verification-item-actions">
-            <button
-              onClick={handleTwitterFollow}
-              disabled={loading.twitterFollow || verificationStates.twitterFollow || !isFullyTwitterVerified}
-              className={`verification-button ${
-                verificationStates.twitterFollow ? 'completed' : 
-                loading.twitterFollow ? 'loading' : 'pending'
-              }`}
-            >
-              {getButtonText('twitterFollow', verificationStates.twitterFollow, loading.twitterFollow)}
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleTwitterFollow}
+                disabled={loading.twitterFollow || verificationStates.twitterFollow || !isFullyTwitterVerified}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  verificationStates.twitterFollow 
+                    ? 'bg-green-500 text-white cursor-not-allowed opacity-60'
+                    : loading.twitterFollow 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : !isFullyTwitterVerified
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white hover:shadow-xl hover:scale-105 transform'
+                }`}
+              >
+                {getButtonText('twitterFollow', verificationStates.twitterFollow, loading.twitterFollow)}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Twitter Retweet */}
-        <div className="verification-item">
-          <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(168, 85, 247, 0.2)'}}>🔄</div>
-            <div className="verification-item-text">
-              <h3 style={{color: '#a855f7'}}>Retweet CodeXero</h3>
-              <p>Retweet the CodeXero announcement</p>
+        <div className="mb-8 p-8 bg-gradient-to-r from-purple-50/80 to-violet-50/80 rounded-2xl border border-purple-200/50 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-400/20 to-violet-500/20 rounded-full border border-purple-400/30 flex items-center justify-center">
+                  <span className="text-2xl">🔄</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-purple-800 mb-2">Retweet CodeXero</h3>
+                  <p className="text-gray-700 mb-2">Retweet the CodeXero announcement to complete this verification step</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="verification-item-actions">
-            <button
-              onClick={handleTwitterPost}
-              disabled={loading.twitterPost || verificationStates.twitterPost || !isFullyTwitterVerified}
-              className={`verification-button ${
-                verificationStates.twitterPost ? 'completed' : 
-                loading.twitterPost ? 'loading' : 'pending'
-              }`}
-            >
-              {getButtonText('twitterPost', verificationStates.twitterPost, loading.twitterPost)}
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleTwitterPost}
+                disabled={loading.twitterPost || verificationStates.twitterPost || !isFullyTwitterVerified}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  verificationStates.twitterPost 
+                    ? 'bg-purple-500 text-white cursor-not-allowed opacity-60'
+                    : loading.twitterPost 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : !isFullyTwitterVerified
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-500 to-violet-600 hover:from-purple-600 hover:to-violet-700 text-white hover:shadow-xl hover:scale-105 transform'
+                }`}
+              >
+                {getButtonText('twitterPost', verificationStates.twitterPost, loading.twitterPost)}
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Profile Verification */}
-        <div className="verification-item">
-          <div>
-            <div className='flex justify-between items-center'>
-              <div className="verification-item-info">
-                <div className="verification-item-icon" style={{background: 'rgba(245, 158, 11, 0.2)'}}>🔍</div>
-                <div className="verification-item-text">
-                  <h3 style={{color: '#f59e0b'}}>Verify Display Name</h3>
-                  <p>Check if your Twitter display name contains verification sequences</p>
+        <div className="mb-8 p-8 bg-gradient-to-r from-amber-50/80 to-orange-50/80 rounded-2xl border border-amber-200/50 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-amber-400/20 to-orange-500/20 rounded-full border border-amber-400/30 flex items-center justify-center">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-amber-800 mb-2">Verify Display Name</h3>
+                  <p className="text-gray-700 mb-2">Check if your Twitter display name contains verification sequences</p>
                 </div>
               </div>
-              <div className="verification-item-actions">
-                <button
-                  onClick={handleUsernameCheck}
-                  className={`verification-button ${
-                    verificationStates.customUsername ? 'completed' : 
-                    loading.customUsername ? 'loading' : 'pending'
-                  }`}
-                >
-                  {getButtonText('customUsername', verificationStates.customUsername, loading.customUsername)}
-                </button>
-              </div>
             </div>
-            {/* Sequence Result Message */}
-            {sequenceResultMessage && (
-              <div style={{
-                marginTop: '12px',
-                padding: '12px',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
-                textAlign: 'center',
-                background: sequenceResultMessage.type === 'success' 
-                  ? 'rgba(34, 197, 94, 0.1)' 
-                  : 'rgba(245, 158, 11, 0.1)',
-                border: `1px solid ${
-                  sequenceResultMessage.type === 'success' ? '#22c55e' : '#f59e0b'
-                }`,
-                color: sequenceResultMessage.type === 'success' ? '#22c55e' : '#f59e0b'
-              }}>
-                {sequenceResultMessage.message}
-              </div>
-            )}
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleUsernameCheck}
+                disabled={loading.customUsername || verificationStates.customUsername || !isFullyTwitterVerified}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  verificationStates.customUsername 
+                    ? 'bg-amber-500 text-white cursor-not-allowed opacity-60'
+                    : loading.customUsername 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : !isFullyTwitterVerified
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white hover:shadow-xl hover:scale-105 transform'
+                }`}
+              >
+                {getButtonText('customUsername', verificationStates.customUsername, loading.customUsername)}
+              </button>
+            </div>
           </div>
+          
+          {/* Sequence Result Message */}
+          {sequenceResultMessage && (
+            <div className={`mt-6 p-4 rounded-xl text-center text-sm font-medium ${
+              sequenceResultMessage.type === 'success' 
+                ? 'bg-green-100 text-green-800 border border-green-200' 
+                : 'bg-amber-100 text-amber-800 border border-amber-200'
+            }`}>
+              {sequenceResultMessage.message}
+            </div>
+          )}
         </div>
 
         {/* Telegram Join */}
-        <div className="verification-item">
-          <div className="verification-item-info">
-            <div className="verification-item-icon" style={{background: 'rgba(6, 182, 212, 0.2)'}}>✈️</div>
-            <div className="verification-item-text">
-              <h3 style={{color: '#06b6d4'}}>Join Telegram</h3>
-              <p>Join our Telegram community (Skipped for now - click to mark as completed)</p>
+        <div className="mb-8 p-8 bg-gradient-to-r from-cyan-50/80 to-blue-50/80 rounded-2xl border border-cyan-200/50 shadow-lg">
+          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+            <div className="flex-1">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-16 h-16 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full border border-cyan-400/30 flex items-center justify-center">
+                  <span className="text-2xl">✈️</span>
+                </div>
+                <div>
+                  <h3 className="text-2xl font-bold text-cyan-800 mb-2">Join Telegram</h3>
+                  <p className="text-gray-700 mb-2">Join our Telegram community (Skipped for now - click to mark as completed)</p>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="verification-item-actions">
-            <button
-              onClick={handleTelegramJoin}
-              disabled={loading.telegramJoin || verificationStates.telegramJoin}
-              className={`verification-button ${
-                verificationStates.telegramJoin ? 'completed' : 
-                loading.telegramJoin ? 'loading' : 'pending'
-              }`}
-            >
-              {getButtonText('telegramJoin', verificationStates.telegramJoin, loading.telegramJoin)}
-            </button>
+            
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={handleTelegramJoin}
+                disabled={loading.telegramJoin || verificationStates.telegramJoin}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+                  verificationStates.telegramJoin 
+                    ? 'bg-cyan-500 text-white cursor-not-allowed opacity-60'
+                    : loading.telegramJoin 
+                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white hover:shadow-xl hover:scale-105 transform'
+                }`}
+              >
+                {getButtonText('telegramJoin', verificationStates.telegramJoin, loading.telegramJoin)}
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Skip for Testing Button */}
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+      <div className="text-center mb-8">
         <button
           onClick={() => {
             // Mark all required steps as completed for testing
@@ -1078,58 +1112,29 @@ console.log("user", user)
               telegramJoin: true
             });
           }}
-          style={{
-            background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-            color: 'white',
-            border: 'none',
-            padding: '12px 24px',
-            borderRadius: '8px',
-            fontSize: '16px',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-          }}
+          className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform"
         >
           🚀 Skip for Testing (Mark All Complete)
         </button>
       </div>
 
-      {/* Check if all required steps are completed */}
-      {(() => {
-        const requiredSteps = {
-          twitterConnect: verificationStates.twitterConnect,
-          twitterFollow: verificationStates.twitterFollow,
-          twitterPost: verificationStates.twitterPost,
-          customUsername: verificationStates.customUsername
-        };
-        return Object.values(requiredSteps).every(state => state);
-      })() && (
-        <div className="completion-card">
-          <div className="completion-icon">🎉</div>
-          <h3 className="completion-title">Step 1 Complete!</h3>
-          <p className="completion-message">All required verification steps completed. Ready to proceed!</p>
-          <div>
-            <div className="completion-spinner"></div>
-          </div>
-        </div>
-      )}
 
-      {/* Progress indicator */}
-      <div className="progress-container">
-        <div className="progress-header">
-          <span className="progress-label">Verification Progress</span>
-          <span className="progress-count">
+      {/* Progress Indicator */}
+      <div className="mb-8 p-6 bg-gradient-to-r from-gray-50/80 to-orange-50/80 rounded-2xl border border-gray-200/50 shadow-lg">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-800">Verification Progress</h3>
+          <span className="text-sm font-medium text-gray-600">
             {Object.values(verificationStates).filter(Boolean).length}/5 completed
           </span>
         </div>
-        <div className="progress-bar">
+        <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
           <div 
-            className="progress-fill"
+            className="bg-gradient-to-r from-orange-400 to-red-500 h-3 rounded-full transition-all duration-500 ease-out"
             style={{ width: `${(Object.values(verificationStates).filter(Boolean).length / 5) * 100}%` }}
           />
         </div>
-        <div className="progress-text">
-          <span className="progress-message">
+        <div className="text-center">
+          <span className="text-sm text-gray-600">
             {Object.values(verificationStates).filter(Boolean).length >= 4
               ? '🎉 All required verifications completed!' 
               : `${4 - Object.values(verificationStates).filter(Boolean).length} required steps remaining`
@@ -1137,7 +1142,6 @@ console.log("user", user)
           </span>
         </div>
       </div>
-
 
     </div>
   );

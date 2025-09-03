@@ -10,6 +10,8 @@ import '../components/AddNFTForm.css';
 import '../components/ReferralGenerator.css';
 import Marketplace from '../components/marketplace/Marketplace.jsx';
 import NFTManagement from '../components/nft-management/NFTManagement.jsx';
+import WalletApprovalSection from '../components/WalletApprovalSection.jsx';
+import Header from '../components/Header.jsx';
 
 export default function MintNft() {
   const [currentTab, setCurrentTab] = useState('verification');
@@ -19,6 +21,7 @@ export default function MintNft() {
   const [isOwner, setIsOwner] = useState(false);
   const [mintingStatus, setMintingStatus] = useState(false);
   const [loadingMintingStatus, setLoadingMintingStatus] = useState(false);
+  const [verificationComplete, setVerificationComplete] = useState(false);
 
   useEffect(() => {
     // Get contract address from environment
@@ -118,30 +121,36 @@ export default function MintNft() {
     }
   };
 
-  const handleReferralGenerated = (referralData) => {
-    console.log('Referral generated:', referralData);
-    toast.success('Referral generated successfully!');
-  };
 
   const handleNFTMinted = (mintData) => {
     console.log('NFT minted:', mintData);
     toast.success('NFT minted successfully!');
   };
 
-  const tabs = [
-    { id: 'verification', label: 'Step 1: Verification', icon: '��' },
-    { id: 'nft-gallery', label: 'NFT Gallery', icon: '🖼️' },
-    { id: 'add-nft', label: 'Add NFT', icon: '➕' },
-    { id: 'referral', label: 'Referral Generator', icon: '��' },
-    { id: 'wallet-approval', label: 'Wallet Approval', icon: '✅' },
-    { id: 'marketplace', label: 'Marketplace', icon: '🛒' },
-    { id: 'nft-management', label: 'NFT Management', icon: '🖼️' } // Add this line
+  const handleVerificationComplete = () => {
+    setVerificationComplete(true);
+    setCurrentTab('nft-gallery'); // Set to first available tab after verification
+    toast.success('🎉 Verification completed! You now have access to all NFT features.');
+  };
+
+  // Dynamic tabs array - verification tab only shows when verification is not complete
+  const tabs = verificationComplete ? [
+    { id: 'nft-gallery', label: 'NFT Gallery', icon: '🖼️', description: 'Browse your NFT collection' },
+  
+    { id: 'referral', label: 'Referral Generator', icon: '🎯', description: 'Generate referral links' },
+    { id: 'wallet-approval', label: 'Wallet Approval', icon: '✅', description: 'Manage wallet permissions' },
+    
+    { id: 'nft-management', label: 'NFT Management', icon: '⚙️', description: 'Manage your NFT portfolio' }
+  ] : [
+    { id: 'verification', label: 'Step 1: Verification', icon: '🔐', description: 'Complete verification process' }
   ];
+
+  const ownerTabs = [  { id: 'add-nft', label: 'Add NFT', icon: '➕', description: 'Create new NFT assets', isOwner:true },{ id: 'marketplace', label: 'Marketplace', icon: '🛒', description: 'Trade and discover NFTs',isOwner:true },]
 
   const renderTabContent = () => {
     switch (currentTab) {
       case 'verification':
-        return <Step1Verification />;
+        return <Step1Verification onVerificationComplete={handleVerificationComplete} />;
       case 'nft-gallery':
         return (
           <NFTGallery 
@@ -175,94 +184,14 @@ export default function MintNft() {
             );
       case 'wallet-approval':
         return (
-          <div className="wallet-approval-section">
-            <div className="max-w-4xl mx-auto p-6">
-              <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 border border-white/20">
-                <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-                  <span className="mr-3">✅</span>
-                  Wallet Approval & Minting Control
-                </h2>
-                
-                {/* Minting Status Section */}
-                <div className="mb-8 p-6 bg-gradient-to-r from-blue-900/50 to-purple-900/50 rounded-lg border border-blue-500/30">
-                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                    <span className="mr-2">🎯</span>
-                    Minting Status Control
-                  </h3>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-gray-300 mb-2">
-                        Current Minting Status:
-                      </p>
-                      <div className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                        mintingStatus 
-                          ? 'bg-green-900 text-green-300 border border-green-500' 
-                          : 'bg-red-900 text-red-300 border border-red-500'
-                      }`}>
-                        <span className={`w-2 h-2 rounded-full mr-2 ${
-                          mintingStatus ? 'bg-green-400' : 'bg-red-400'
-                        }`}></span>
-                        {mintingStatus ? 'Enabled' : 'Disabled'}
-                      </div>
-                    </div>
-                    
-                    {isOwner && (
-                      <button
-                        onClick={toggleMinting}
-                        disabled={loadingMintingStatus}
-                        className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                          loadingMintingStatus
-                            ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-                            : mintingStatus
-                              ? 'bg-red-600 hover:bg-red-700 text-white'
-                              : 'bg-green-600 hover:bg-green-700 text-white'
-                        }`}
-                      >
-                        {loadingMintingStatus ? (
-                          <span className="flex items-center">
-                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                            Processing...
-                          </span>
-                        ) : mintingStatus ? (
-                          'Disable Minting'
-                        ) : (
-                          'Enable Minting'
-                        )}
-                      </button>
-                    )}
-                  </div>
-                  
-                  {!isOwner && (
-                    <div className="bg-yellow-900/50 border border-yellow-500/30 rounded-lg p-4">
-                      <p className="text-yellow-300 text-sm">
-                        ⚠️ Only the contract owner can control minting status
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div className="text-sm text-gray-400 mt-3">
-                    <p>• <strong>Enabled:</strong> Users can mint NFTs</p>
-                    <p>• <strong>Disabled:</strong> Minting is paused for all users</p>
-                    <p>• <strong>Owner Only:</strong> Only contract owner can change this setting</p>
-                  </div>
-                </div>
-
-                {/* Wallet Approval Section */}
-                <div className="p-6 bg-gradient-to-r from-green-900/50 to-blue-900/50 rounded-lg border border-green-500/30">
-                  <h3 className="text-xl font-semibold text-white mb-4 flex items-center">
-                    <span className="mr-2">🔓</span>
-                    Approve Wallet Addresses
-                  </h3>
-                  
-                  <WalletApprovalForm 
-                    onWalletApproved={handleWalletApproval}
-                    isOwner={isOwner}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <WalletApprovalSection 
+            contractAddress={contractAddress}
+            isOwner={isOwner}
+            mintingStatus={mintingStatus}
+            loadingMintingStatus={loadingMintingStatus}
+            onToggleMinting={toggleMinting}
+            onWalletApproved={handleWalletApproval}
+          />
         );
       default:
         return null;
@@ -270,118 +199,99 @@ export default function MintNft() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 text-white">
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-            CodeXero NFT Platform
-          </h1>
-          <p className="text-xl text-gray-300">
-            Mint, manage, and trade your digital assets
-          </p>
-        </div>
+    <div className="min-h-screen bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('./assets/backgroubnd.jpg')" }}>
+      <div className="min-h-screen bg-black/20 backdrop-blur-sm">
+        {/* Header Component */}
+        <Header showWaitlistButton={false} />
+        
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Page Header Section */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full border border-orange-400/30 backdrop-blur-lg mb-6">
+              <span className="text-4xl">🎨</span>
+            </div>
+            <h1 className="text-5xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-orange-500 bg-clip-text text-transparent">
+              CodeXero NFT Platform
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-4">
+              {verificationComplete 
+                ? 'Mint, manage, and trade your digital assets with professional-grade tools'
+                : 'Complete verification to unlock the full NFT platform'
+              }
+            </p>
+            
+          </div>
 
-        {/* Tab Navigation */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setCurrentTab(tab.id)}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all duration-300 ${
-                currentTab === tab.id
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                  : 'bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white'
-              }`}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
 
-        {/* Tab Content */}
-        {renderTabContent()}
+          {/* Conditional Tab Navigation - Only show after verification */}
+          {verificationComplete && (
+            <div className="mb-12">
+              <div className="flex flex-wrap justify-center gap-3">
+                {tabs.map((tab) => (   <button
+                    key={tab.id}
+                    onClick={() => setCurrentTab(tab.id)}
+                    className={`group relative px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                      currentTab === tab.id
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-xl shadow-orange-500/30 transform scale-105'
+                        : 'bg-white/80 hover:bg-white/90 text-gray-700 hover:text-gray-800 hover:shadow-lg hover:shadow-orange-500/20'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{tab.icon}</span>
+                      <div className="text-left">
+                        <div className="font-bold">{tab.label}</div>
+                        <div className={`text-xs opacity-80 transition-opacity duration-300 ${
+                          currentTab === tab.id ? 'opacity-100' : 'opacity-60'
+                        }`}>
+                          {tab.description}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Hover effect indicator */}
+                    {currentTab === tab.id && (
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-orange-500 rounded-full"></div>
+                    )}
+                  </button>))}
+
+                  {isOwner && ownerTabs.map((tab) => (   <button
+                    key={tab.id}
+                    onClick={() => setCurrentTab(tab.id)}
+                    className={`group relative px-6 py-4 rounded-2xl font-semibold transition-all duration-300 ${
+                      currentTab === tab.id
+                        ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-xl shadow-orange-500/30 transform scale-105'
+                        : 'bg-white/80 hover:bg-white/90 text-gray-700 hover:text-gray-800 hover:shadow-lg hover:shadow-orange-500/20'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">{tab.icon}</span>
+                      <div className="text-left">
+                        <div className="font-bold">{tab.label}</div>
+                        <div className={`text-xs opacity-80 transition-opacity duration-300 ${
+                          currentTab === tab.id ? 'opacity-100' : 'opacity-60'
+                        }`}>
+                          {tab.description}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Hover effect indicator */}
+                    {currentTab === tab.id && (
+                      <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-4 h-1 bg-orange-500 rounded-full"></div>
+                    )}
+                  </button>))}
+              </div>
+            </div>
+          )}
+
+
+          {/* Tab Content */}
+          <div className="animate-fadeIn">
+            {renderTabContent()}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-// Wallet Approval Form Component
-function WalletApprovalForm({ onWalletApproved, isOwner }) {
-  const [walletAddress, setWalletAddress] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!walletAddress.trim()) {
-      toast.error('Please enter a wallet address');
-      return;
-    }
-
-    if (!isOwner) {
-      toast.error('Only contract owner can approve wallets');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await onWalletApproved(walletAddress.trim());
-      setWalletAddress('');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label htmlFor="walletAddress" className="block text-sm font-medium text-gray-300 mb-2">
-          Wallet Address to Approve
-        </label>
-        <input
-          type="text"
-          id="walletAddress"
-          value={walletAddress}
-          onChange={(e) => setWalletAddress(e.target.value)}
-          placeholder="0x..."
-          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          disabled={!isOwner}
-        />
-      </div>
-      
-      <button
-        type="submit"
-        disabled={!isOwner || isSubmitting || !walletAddress.trim()}
-        className={`w-full py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
-          !isOwner || isSubmitting || !walletAddress.trim()
-            ? 'bg-gray-600 text-gray-300 cursor-not-allowed'
-            : 'bg-green-600 hover:bg-green-700 text-white hover:transform hover:scale-105'
-        }`}
-      >
-        {isSubmitting ? (
-          <span className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-            Approving...
-          </span>
-        ) : (
-          'Approve Wallet'
-        )}
-      </button>
-      
-      {!isOwner && (
-        <div className="bg-yellow-900/50 border border-yellow-500/30 rounded-lg p-4">
-          <p className="text-yellow-300 text-sm">
-            ⚠️ Only the contract owner can approve wallet addresses
-          </p>
-        </div>
-      )}
-      
-      <div className="text-sm text-gray-400">
-        <p>• <strong>Approved wallets</strong> can mint NFTs without verification</p>
-        <p>• <strong>Owner only:</strong> Only contract owner can approve wallets</p>
-        <p>• <strong>Instant access:</strong> Approved wallets can mint immediately</p>
-      </div>
-    </form>
-  );
-}

@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 import { createContract, isWalletConnected, getAccountAddress } from '../utils/signerAdapter.js';
 import IPFSService from '../services/ipfsService.js';
 import CONTRACT_ABI from '../constants/abi.json';
-import './AddNFTForm.css';
 
 export default function AddNFTForm({ contractAddress }) {
   const [formData, setFormData] = useState({
@@ -342,16 +341,18 @@ export default function AddNFTForm({ contractAddress }) {
 
   if (!walletConnected) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center max-w-md w-full border border-white/20 shadow-2xl">
-          <div className="text-6xl mb-6">��</div>
-          <h3 className="text-2xl font-bold text-white mb-4">Wallet Not Connected</h3>
-          <p className="text-gray-300 mb-6 text-lg">
-            Please connect your wallet to add NFTs
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full border border-orange-400/30 backdrop-blur-lg mb-6">
+            <span className="text-5xl">🔗</span>
+          </div>
+          <h3 className="text-3xl font-bold text-gray-800 mb-4">Wallet Not Connected</h3>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Please connect your wallet to add NFTs to the CodeXero collection
           </p>
           <button
             onClick={connectWallet}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg"
+            className="px-8 py-4 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 transform"
           >
             Connect Wallet
           </button>
@@ -362,35 +363,48 @@ export default function AddNFTForm({ contractAddress }) {
 
   if (!isOwner) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-red-900 to-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 text-center max-w-md w-full border border-white/20 shadow-2xl">
-          <div className="text-6xl mb-6">��</div>
-          <h3 className="text-2xl font-bold text-white mb-4">Access Denied</h3>
-          <p className="text-gray-300 mb-6 text-lg">
-            Only the contract owner can add NFTs
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="text-center py-12">
+          <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-red-400/20 to-red-500/20 rounded-full border border-red-400/30 backdrop-blur-lg mb-6">
+            <span className="text-5xl">🚫</span>
+          </div>
+          <h3 className="text-3xl font-bold text-gray-800 mb-4">Access Denied</h3>
+          <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+            Only the contract owner can add NFTs to the collection
           </p>
+          <div className="bg-gradient-to-r from-red-50/80 to-orange-50/80 border border-red-200/50 rounded-xl p-6 inline-block">
+            <p className="text-red-700 font-medium">
+              You need to be the contract owner to access this feature
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-gray-900 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h2 className="text-4xl font-bold text-white mb-4">Add New NFT</h2>
-          <p className="text-xl text-gray-300">
-            Add pre-existing NFTs to the collection with direct IPFS upload
-          </p>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      {/* Header Section */}
+      <div className="text-center mb-12">
+        <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full border border-orange-400/30 backdrop-blur-lg mb-6">
+          <span className="text-3xl">➕</span>
         </div>
+        <h2 className="text-4xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-orange-500 bg-clip-text text-transparent">
+          Add New NFT
+        </h2>
+        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          Add pre-existing NFTs to the collection with direct IPFS upload
+        </p>
+        <div className="w-32 h-1 bg-gradient-to-r from-orange-400 to-red-500 mx-auto rounded-full mt-6"></div>
+      </div>
 
-        {/* Form */}
-        <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
-          <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Form */}
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white/90 backdrop-blur-xl rounded-3xl border border-orange-200/50 shadow-2xl shadow-orange-500/20 overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-8 space-y-6">
             {/* Name Field */}
-            <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-semibold text-white">
+            <div className="space-y-3">
+              <label htmlFor="name" className="block text-sm font-semibold text-gray-700">
                 Name *
               </label>
               <input
@@ -401,13 +415,13 @@ export default function AddNFTForm({ contractAddress }) {
                 onChange={handleInputChange}
                 placeholder="Enter NFT name"
                 required
-                className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                className="w-full bg-white/80 border border-gray-200/50 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 shadow-sm"
               />
             </div>
 
             {/* Description */}
-            <div className="space-y-2">
-              <label htmlFor="description" className="block text-sm font-semibold text-white">
+            <div className="space-y-3">
+              <label htmlFor="description" className="block text-sm font-semibold text-gray-700">
                 Description *
               </label>
               <textarea
@@ -418,16 +432,16 @@ export default function AddNFTForm({ contractAddress }) {
                 required
                 value={formData.description}
                 onChange={handleInputChange}
-                className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 resize-none"
+                className="w-full bg-white/80 border border-gray-200/50 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 resize-none shadow-sm"
               />
             </div>
 
             {/* Image Upload */}
-            <div className="space-y-2">
-              <label htmlFor="image" className="block text-sm font-semibold text-white">
+            <div className="space-y-3">
+              <label htmlFor="image" className="block text-sm font-semibold text-gray-700">
                 Image File *
               </label>
-              <div className="border-2 border-dashed border-white/30 rounded-lg p-6 text-center hover:border-blue-500 transition-colors duration-300">
+              <div className="border-2 border-dashed border-orange-200/50 rounded-xl p-8 text-center hover:border-orange-400 transition-colors duration-300 bg-gradient-to-r from-orange-50/30 to-red-50/30">
                 <input
                   type="file"
                   id="image"
@@ -440,14 +454,16 @@ export default function AddNFTForm({ contractAddress }) {
                 <label htmlFor="image" className="cursor-pointer">
                   {imagePreview ? (
                     <div className="space-y-4">
-                      <img src={imagePreview} alt="Preview" className="mx-auto max-h-48 rounded-lg shadow-lg" />
-                      <p className="text-blue-400">Click to change image</p>
+                      <img src={imagePreview} alt="Preview" className="mx-auto max-h-48 rounded-xl shadow-lg" />
+                      <p className="text-orange-600 font-medium">Click to change image</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      <div className="text-6xl">📁</div>
-                      <p className="text-white text-lg">Click to upload image</p>
-                      <p className="text-gray-400 text-sm">PNG, JPG, GIF • Max 10MB</p>
+                      <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-orange-400/20 to-red-500/20 rounded-full border border-orange-400/30 mb-4">
+                        <span className="text-3xl">📁</span>
+                      </div>
+                      <p className="text-gray-800 text-lg font-medium">Click to upload image</p>
+                      <p className="text-gray-600 text-sm">PNG, JPG, GIF • Max 10MB</p>
                     </div>
                   )}
                 </label>
@@ -456,8 +472,8 @@ export default function AddNFTForm({ contractAddress }) {
 
             {/* Rarity and Price */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label htmlFor="rarity" className="block text-sm font-semibold text-white">
+              <div className="space-y-3">
+                <label htmlFor="rarity" className="block text-sm font-semibold text-gray-700">
                   Rarity
                 </label>
                 <select
@@ -465,17 +481,17 @@ export default function AddNFTForm({ contractAddress }) {
                   name="rarity"
                   value={formData.rarity}
                   onChange={handleInputChange}
-                  className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                  className="w-full bg-white/80 border border-gray-200/50 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 shadow-sm"
                 >
-                  <option value="1" className="bg-gray-800 text-white">Common</option>
-                  <option value="2" className="bg-gray-800 text-white">Rare</option>
-                  <option value="3" className="bg-gray-800 text-white">Epic</option>
-                  <option value="4" className="bg-gray-800 text-white">Legendary</option>
+                  <option value="1" className="bg-white text-gray-800">Common</option>
+                  <option value="2" className="bg-white text-gray-800">Rare</option>
+                  <option value="3" className="bg-white text-gray-800">Epic</option>
+                  <option value="4" className="bg-white text-gray-800">Legendary</option>
                 </select>
               </div>
               
-              <div className="space-y-2">
-                <label htmlFor="price" className="block text-sm font-semibold text-white">
+              <div className="space-y-3">
+                <label htmlFor="price" className="block text-sm font-semibold text-gray-700">
                   Price (SEI) *
                 </label>
                 <input
@@ -488,14 +504,14 @@ export default function AddNFTForm({ contractAddress }) {
                   step="0.001"
                   min="0"
                   required
-                  className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300"
+                  className="w-full bg-white/80 border border-gray-200/50 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 shadow-sm"
                 />
               </div>
             </div>
 
             {/* Attributes */}
-            <div className="space-y-2">
-              <label htmlFor="attributes" className="block text-sm font-semibold text-white">
+            <div className="space-y-3">
+              <label htmlFor="attributes" className="block text-sm font-semibold text-gray-700">
                 Attributes (JSON)
               </label>
               <textarea
@@ -505,23 +521,23 @@ export default function AddNFTForm({ contractAddress }) {
                 onChange={handleInputChange}
                 placeholder='Enter JSON attributes (e.g., {"type": "Explorer", "rarity": "Rare"})'
                 rows="2"
-                className="w-full bg-white/20 border border-white/30 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 resize-none"
+                className="w-full bg-white/80 border border-gray-200/50 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all duration-300 resize-none shadow-sm"
               />
-              <small className="text-gray-400 text-sm">
+              <small className="text-gray-500 text-sm">
                 Optional: JSON format for custom attributes
               </small>
             </div>
 
             {/* Upload Progress Bar */}
             {uploadProgress > 0 && (
-              <div className="space-y-2">
-                <div className="w-full bg-white/20 rounded-full h-3 overflow-hidden">
+              <div className="space-y-3">
+                <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden shadow-inner">
                   <div 
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500 ease-out"
+                    className="bg-gradient-to-r from-orange-500 to-red-500 h-3 rounded-full transition-all duration-500 ease-out shadow-sm"
                     style={{ width: `${uploadProgress}%` }}
                   ></div>
                 </div>
-                <p className="text-center text-white font-semibold">{uploadProgress}% Complete</p>
+                <p className="text-center text-gray-700 font-semibold">{uploadProgress}% Complete</p>
               </div>
             )}
 
@@ -530,11 +546,11 @@ export default function AddNFTForm({ contractAddress }) {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg disabled:cursor-not-allowed"
+                className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                     Adding NFT...
                   </span>
                 ) : (
@@ -546,11 +562,11 @@ export default function AddNFTForm({ contractAddress }) {
                 type="button"
                 onClick={addSampleNFTs}
                 disabled={isLoading}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-700 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-100 disabled:scale-100 shadow-lg disabled:cursor-not-allowed"
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 disabled:scale-100 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-3"></div>
                     Adding...
                   </span>
                 ) : (

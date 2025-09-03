@@ -4,7 +4,7 @@ import logo from '../assets/logo.png';
 import { supabase } from '../supabase';
 import Confetti from '../Confetti';
 import seiLogo from "../assets/sei_red_and_white.svg"
-import ConnectWallet from '../components/ConnectWallet';
+import Header from '../components/Header';
 
 
 
@@ -97,24 +97,24 @@ function WaitlistModal({ open, onClose }) {
   // Wallet address validation function
   const validateWalletAddress = (address) => {
     if (!address) return 'Wallet address is required';
-    
+
     // Remove spaces and convert to lowercase
     const cleanAddress = address.trim();
-    
+
     // Check for Ethereum format: 0x followed by exactly 40 hex characters
     if (!cleanAddress.startsWith('0x')) {
       return 'Wallet address must start with 0x';
     }
-    
+
     if (cleanAddress.length !== 42) {
       return 'Wallet address must be exactly 42 characters (0x + 40 hex characters)';
     }
-    
+
     // Check if it contains only valid hex characters after 0x
     if (!/^0x[a-fA-F0-9]{40}$/.test(cleanAddress)) {
       return 'Wallet address must contain only hexadecimal characters (0-9, a-f, A-F)';
     }
-    
+
     return null; // No error
   };
 
@@ -159,21 +159,21 @@ function WaitlistModal({ open, onClose }) {
       update();
 
     }
-   
-      fetchTotalSubscriptions()
-   
+
+    fetchTotalSubscriptions()
+
   }, [open]);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    
+
     // Clear previous errors
     setErrors({});
-    
+
     // Validate inputs
     const emailError = validateEmail(email);
     const walletError = validateWalletAddress(walletAddress);
-    
+
     if (emailError || walletError) {
       setErrors({
         email: emailError,
@@ -181,7 +181,7 @@ function WaitlistModal({ open, onClose }) {
       });
       return;
     }
-    
+
     setFormState('securing');
 
     try {
@@ -201,7 +201,7 @@ function WaitlistModal({ open, onClose }) {
       if (existingSubscriptions && existingSubscriptions.length > 0) {
         const existingEmail = existingSubscriptions.find(sub => sub.email === email);
         const existingWallet = existingSubscriptions.find(sub => sub.walletaddress === walletAddress);
-        
+
         let errorMessage = '';
         if (existingEmail && existingWallet) {
           errorMessage = 'Both email and wallet address are already subscribed!';
@@ -210,7 +210,7 @@ function WaitlistModal({ open, onClose }) {
         } else if (existingWallet) {
           errorMessage = 'This wallet address is already subscribed!';
         }
-        
+
         setErrors({
           general: errorMessage
         });
@@ -307,7 +307,7 @@ function WaitlistModal({ open, onClose }) {
               {errors.general}
             </div>
           )}
-          
+
           <div className="form-group">
             <input
               ref={inputRef}
@@ -319,7 +319,7 @@ function WaitlistModal({ open, onClose }) {
               required
             />
             {errors.email && <div className="error-message">{errors.email}</div>}
-            
+
             <input
               type="text"
               placeholder="Enter your SEI wallet address"
@@ -329,7 +329,7 @@ function WaitlistModal({ open, onClose }) {
               required
             />
             {errors.walletAddress && <div className="error-message">{errors.walletAddress}</div>}
-            
+
             <button type="submit" className="join-waitlist-btn" disabled={formState !== 'idle'} style={formState === 'secured' ? { background: 'linear-gradient(45deg, #4CAF50, #45a049)' } : {}}>
               <span className="btn-text">
                 {formState === 'idle' && 'SECURE MY SPOT'}
@@ -370,123 +370,113 @@ function HomePage() {
   }, [loading]);
 
   return (
-    <div className="container">
-      {loading && <LoadingScreen onFinish={() => setLoading(false)} />}
-      <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
-      {/* Header */}
-      <header className="header">
-          <div className="logo">
-          <div className="logo-animated-container">
-            <img src={logo} alt="CodeZero" className="logo-img-animated" />
-            <div className="bounce-wave"></div>
-            <span className="logo-text">CodeXero</span>
-          </div>
-        </div>
-        <nav className="nav">
-          <ConnectWallet />
-          <button className="get-started-btn" onClick={() => setWaitlistOpen(true)}>Get Early Access</button>
-        </nav>
-      </header>
-      {/* Main Content */}
-      <main className="hero">
-        <div className="hero-content">
-          {/* Background Text */}
-          <div className="bg-text">CODEXERO</div>
-          {/* 3D Logo Container */}
-          <div className="logo-3d-container">
-            <div className="spotlight-beam"></div>
-            <div className="logo-3d-wrapper">
-              <img src={logo} alt="CodeXero Logo" className="main-logo" />
+    <div className='flex flex-col items-center justify-center'>
+      <div className="container1">
+        {loading && <LoadingScreen onFinish={() => setLoading(false)} />}
+        <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
+        {/* Header */}
+        <Header onWaitlistOpen={() => setWaitlistOpen(true)} showWaitlistButton={true} />
+        {/* Main Content */}
+        <main className="hero">
+          <div className="hero-content">
+            {/* Background Text */}
+            <div className="bg-text">CODEXERO</div>
+            {/* 3D Logo Container */}
+            <div className="logo-3d-container">
+              <div className="spotlight-beam"></div>
+              <div className="logo-3d-wrapper">
+                <img src={logo} alt="CodeXero Logo" className="main-logo" />
+              </div>
             </div>
-          </div>
-          {/* Main Content */}
-          <div className="main-content">
-            <h1 className="main-title wave-text">
-              <span className="wave-letter">C</span>
-              <span className="wave-letter">o</span>
-              <span className="wave-letter">d</span>
-              <span className="wave-letter">e</span>
-              <span className="wave-letter">X</span>
-              <span className="wave-letter">e</span>
-              <span className="wave-letter">r</span>
-              <span className="wave-letter">o</span>
-              <span className="wave-space"> </span>
-              <span className="wave-letter">i</span>
-              <span className="wave-letter">s</span>
-              <span className="wave-space"> </span>
-              <span className="wave-letter">C</span>
-              <span className="wave-letter">o</span>
-              <span className="wave-letter">m</span>
-              <span className="wave-letter">i</span>
-              <span className="wave-letter">n</span>
-              <span className="wave-letter">g</span>
-              <span className="wave-letter">.</span>
-            </h1>
-            <p className="subtitle">On <img src={seiLogo} alt="Sei" className="sei-logo" /> ICM moves faster.</p>
-            {/* Flipping Glass Tags Section */}
-            <div className="tags-inline">
-              <div className="tag-container-inline">
-                <div className="left-tags">
-                  <div className="tag glass-tag">
-                    <div className="flip-text">
-                      <span className="flip-word active">DEX</span>
-                      <span className="flip-word">DeFi</span>
-                      <span className="flip-word">Swap</span>
-                      <span className="flip-word">Liquidity</span>
-                      <span className="flip-word">Staking</span>
-                      <span className="flip-word">Data Feeds</span>
+            {/* Main Content */}
+            <div className="main-content">
+              <h1 className="main-title wave-text">
+                <span className="wave-letter">C</span>
+                <span className="wave-letter">o</span>
+                <span className="wave-letter">d</span>
+                <span className="wave-letter">e</span>
+                <span className="wave-letter">X</span>
+                <span className="wave-letter">e</span>
+                <span className="wave-letter">r</span>
+                <span className="wave-letter">o</span>
+                <span className="wave-space"> </span>
+                <span className="wave-letter">i</span>
+                <span className="wave-letter">s</span>
+                <span className="wave-space"> </span>
+                <span className="wave-letter">C</span>
+                <span className="wave-letter">o</span>
+                <span className="wave-letter">m</span>
+                <span className="wave-letter">i</span>
+                <span className="wave-letter">n</span>
+                <span className="wave-letter">g</span>
+                <span className="wave-letter">.</span>
+              </h1>
+              <p className="subtitle">On <img src={seiLogo} alt="Sei" className="sei-logo" /> ICM moves faster.</p>
+              {/* Flipping Glass Tags Section */}
+              <div className="tags-inline">
+                <div className="tag-container-inline">
+                  <div className="left-tags">
+                    <div className="tag glass-tag">
+                      <div className="flip-text">
+                        <span className="flip-word active">DEX</span>
+                        <span className="flip-word">DeFi</span>
+                        <span className="flip-word">Swap</span>
+                        <span className="flip-word">Liquidity</span>
+                        <span className="flip-word">Staking</span>
+                        <span className="flip-word">Data Feeds</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="tag glass-tag">
-                    <div className="flip-text">
-                      <span className="flip-word active">NFTs</span>
-                      <span className="flip-word">Collectibles</span>
-                      <span className="flip-word">Minting</span>
-                      <span className="flip-word">DAO</span>
-                      <span className="flip-word">Treasury</span>
-                      <span className="flip-word">Smart Contracts</span>
+                    <div className="tag glass-tag">
+                      <div className="flip-text">
+                        <span className="flip-word active">NFTs</span>
+                        <span className="flip-word">Collectibles</span>
+                        <span className="flip-word">Minting</span>
+                        <span className="flip-word">DAO</span>
+                        <span className="flip-word">Treasury</span>
+                        <span className="flip-word">Smart Contracts</span>
+                      </div>
                     </div>
-                  </div>
-                  <div className="tag glass-tag">
-                    <div className="flip-text">
-                      <span className="flip-word active">Payments</span>
-                      <span className="flip-word">Wallet</span>
-                      <span className="flip-word">Cross-chain</span>
-                      <span className="flip-word">Voting</span>
-                      <span className="flip-word">Yield</span>
-                      <span className="flip-word">Chainlink</span>
+                    <div className="tag glass-tag">
+                      <div className="flip-text">
+                        <span className="flip-word active">Payments</span>
+                        <span className="flip-word">Wallet</span>
+                        <span className="flip-word">Cross-chain</span>
+                        <span className="flip-word">Voting</span>
+                        <span className="flip-word">Yield</span>
+                        <span className="flip-word">Chainlink</span>
 
+                      </div>
+                    </div>
+                    <div className="tag glass-tag">
+                      <div className="flip-text">
+                        <span className="flip-word active">GameFi</span>
+                        <span className="flip-word">Community</span>
+                        <span className="flip-word">Play-to-Earn</span>
+                        <span className="flip-word">Rewards</span>
+                        <span className="flip-word">Oracles</span>
+                        <span className="flip-word active">Stablecoins</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="tag glass-tag">
-                    <div className="flip-text">
-                      <span className="flip-word active">GameFi</span>
-                      <span className="flip-word">Community</span>
-                      <span className="flip-word">Play-to-Earn</span>
-                      <span className="flip-word">Rewards</span>
-                      <span className="flip-word">Oracles</span>
-                      <span className="flip-word active">Stablecoins</span>
-                    </div>
-                  </div>
-                </div>
-                {/* <div className="next-arrow glass-arrow">
+                  {/* <div className="next-arrow glass-arrow">
                   Next
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 12h14M12 5l7 7-7 7" />
                   </svg>
                 </div> */}
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </main>
-      
-      {/* Hall of Dapp Section */}
-      {/* <HallOfDapp /> */}
-      
-      
-      {/* Toast Notifications - Now handled in main.jsx */}
+        </main>
+
+        {/* Hall of Dapp Section */}
+        {/* <HallOfDapp /> */}
+
+
+        {/* Toast Notifications - Now handled in main.jsx */}
       </div>
+    </div>
   );
 }
 

@@ -3,7 +3,6 @@ import { ethers } from 'ethers';
 import { toast } from 'react-toastify';
 import { createContract, isWalletConnected, getAccountAddress } from '../../utils/signerAdapter.js';
 import CONTRACT_ABI from '../../constants/abi.json';
-import './Marketplace.css';
 
 export default function Marketplace({ contractAddress }) {
     const [listings, setListings] = useState([]);
@@ -51,7 +50,7 @@ export default function Marketplace({ contractAddress }) {
           const contract = createContract(contractAddress, CONTRACT_ABI.abi);
           const allListings = await contract.getAllListings();
           
-          console.log('�� Raw allListings:', allListings);
+          console.log(' Raw allListings:', allListings);
           
           const listingsData = [];
           for (let i = 0; i < allListings.length; i++) {
@@ -104,7 +103,7 @@ export default function Marketplace({ contractAddress }) {
             const nftsWithDetails = [];
             for (let i = 0; i < userNFTsData.length; i++) {
                 const tokenId = userNFTsData[i];
-                console.log('�� Processing tokenId:', tokenId.toString());
+                console.log(' Processing tokenId:', tokenId.toString());
 
                 try {
                     const detailedInfo = await contract.getDetailedNFTInfo(tokenId);
@@ -133,13 +132,13 @@ export default function Marketplace({ contractAddress }) {
             const contract = createContract(contractAddress, CONTRACT_ABI.abi);
 
             const mintingHistory = await contract.getUserMintingHistory(accountAddress);
-            console.log('�� Raw mintingHistory:', mintingHistory);
+            console.log(' Raw mintingHistory:', mintingHistory);
             console.log('📊 mintingHistory length:', mintingHistory.length);
 
             const historyWithDetails = [];
             for (let i = 0; i < mintingHistory.length; i++) {
                 const tokenId = mintingHistory[i];
-                console.log('�� Processing minting history tokenId:', tokenId.toString());
+                console.log(' Processing minting history tokenId:', tokenId.toString());
 
                 try {
                     const detailedInfo = await contract.getDetailedNFTInfo(tokenId);
@@ -254,27 +253,37 @@ export default function Marketplace({ contractAddress }) {
     };
 
     const renderMarketplaceTab = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-gray-800">Available NFTs for Sale</h3>
+        <div className="space-y-8">
+            <div className="text-center">
+                <h3 className="text-3xl font-bold text-gray-800 mb-4">Available NFTs for Sale</h3>
+                <p className="text-gray-600 text-lg">Discover and purchase unique CodeXero NFTs from other collectors</p>
+            </div>
+            
             {loading ? (
-                <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-2 text-gray-600">Loading marketplace...</p>
+                <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full border border-blue-400/30 backdrop-blur-lg mb-6">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                    <p className="text-xl text-gray-600 font-medium">Loading marketplace...</p>
                 </div>
             ) : listings.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    <p>No NFTs currently listed for sale</p>
+                <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-400/20 to-gray-500/20 rounded-full border border-gray-400/30 backdrop-blur-lg mb-6">
+                        <span className="text-4xl">🏪</span>
+                    </div>
+                    <h4 className="text-2xl font-bold text-gray-800 mb-2">No NFTs Available</h4>
+                    <p className="text-gray-600 text-lg">No NFTs are currently listed for sale</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {listings.map((listing) => (
-                        <div key={listing.listingId} className="bg-white rounded-lg shadow-md overflow-hidden">
-                            <div className="aspect-square bg-gray-200">
+                        <div key={listing.listingId} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl shadow-gray-500/20 overflow-hidden hover:shadow-2xl hover:shadow-gray-500/30 transition-all duration-300 hover:scale-105 group">
+                            <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
                                 {listing.nftInfo.image ? (
                                     <img
                                         src={convertIPFSUrl(listing.nftInfo.image)}
                                         alt={listing.nftInfo.name}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                         onError={(e) => {
                                             // Better fallback image
                                             e.target.src = getFallbackImage(
@@ -284,30 +293,38 @@ export default function Marketplace({ contractAddress }) {
                                         }}
                                     />
                                 ) : (
-                                    <div className={`w-full h-full flex items-center justify-center ${getFallbackImage('NFT', 1)}`}>
-                                        <span className="text-gray-500 text-sm">No Image</span>
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <span className="text-gray-500 text-lg font-medium">No Image</span>
                                     </div>
                                 )}
+                                
+                                {/* Price Badge */}
+                                <div className="absolute top-3 right-3 bg-gradient-to-r from-orange-500 to-red-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                    {listing.price} SEI
+                                </div>
                             </div>
-                            <div className="p-4">
-                                <h4 className="font-semibold text-lg text-gray-800 mb-2">
+                            
+                            <div className="p-6">
+                                <h4 className="font-bold text-xl text-gray-800 mb-3 line-clamp-2">
                                     {listing.nftInfo.name || `NFT #${listing.tokenId}`}
                                 </h4>
-                                <p className="text-gray-600 text-sm mb-3">
+                                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                                     {listing.nftInfo.description || 'No description available'}
                                 </p>
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="text-lg font-bold text-blue-600">
-                                        {listing.price} SEI
-                                    </span>
-                                    <span className="text-sm text-gray-500">
-                                        Seller: {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
-                                    </span>
+                                
+                                <div className="space-y-3 mb-4">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <span className="text-gray-500">Seller:</span>
+                                        <span className="text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
+                                            {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
+                                        </span>
+                                    </div>
                                 </div>
+                                
                                 {walletConnected && accountAddress !== listing.seller && (
                                     <button
                                         onClick={() => buyNFT(listing.listingId)}
-                                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                                        className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
                                     >
                                         Buy Now
                                     </button>
@@ -321,158 +338,199 @@ export default function Marketplace({ contractAddress }) {
     );
 
     const renderMyNFTsTab = () => (
-        <div className="space-y-6">
-          <h3 className="text-xl font-semibold text-gray-800">My NFTs</h3>
-          {userNFTs.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>You don't own any NFTs yet</p>
+        <div className="space-y-8">
+            <div className="text-center">
+                <h3 className="text-3xl font-bold text-gray-800 mb-4">My NFT Collection</h3>
+                <p className="text-gray-600 text-lg">Manage and trade your owned CodeXero NFTs</p>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {userNFTs.map((nft) => {
-                // Check if this NFT is already listed for sale
-                const isListed = listings.some(listing => 
-                  listing.tokenId === nft.tokenId && listing.isActive
-                );
-                
-                return (
-                  <div key={nft.tokenId} className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div className="aspect-square bg-gray-200">
-                      {nft.image ? (
-                        <img
-                          src={convertIPFSUrl(nft.image)}
-                          alt={nft.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.src = getFallbackImage(nft.name || 'NFT', nft.rarity || 1);
-                          }}
-                        />
-                      ) : (
-                        <div className={`w-full h-full flex items-center justify-center ${getFallbackImage('NFT', 1)}`}>
-                          <span className="text-gray-500 text-sm">No Image</span>
-                        </div>
-                      )}
+            
+            {userNFTs.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-400/20 to-gray-500/20 rounded-full border border-gray-400/30 backdrop-blur-lg mb-6">
+                        <span className="text-4xl">🎨</span>
                     </div>
-                    <div className="p-4">
-                      <h4 className="font-semibold text-lg text-gray-800 mb-2">
-                        {nft.name || `NFT #${nft.tokenId}`}
-                      </h4>
-                      <p className="text-gray-600 text-sm mb-3">
-                        {nft.description || 'No description available'}
-                      </p>
-                      
-                      {/* Show listing status */}
-                      {isListed && (
-                        <div className="mb-3 p-2 bg-green-50 border border-green-200 rounded-md">
-                          <p className="text-green-800 text-sm font-medium">
-                            ✅ Listed for Sale
-                          </p>
-                          <p className="text-green-600 text-xs">
-                            Price: {listings.find(l => l.tokenId === nft.tokenId)?.price} SEI
-                          </p>
-                        </div>
-                      )}
-                      
-                      <div className="space-y-2">
-                        <button
-                          onClick={() => {
-                            if (isListed) {
-                              // If already listed, show current listing info
-                              const listing = listings.find(l => l.tokenId === nft.tokenId);
-                              toast.info(`This NFT is already listed for ${listing?.price} SEI`);
-                            } else {
-                              // If not listed, prompt for price
-                              const price = prompt('Enter price in SEI:');
-                              if (price && !isNaN(price)) {
-                                listNFTForSale(nft.tokenId, price);
-                              }
-                            }
-                          }}
-                          disabled={isListed}
-                          className={`w-full py-2 px-4 rounded-md transition-colors ${
-                            isListed 
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                              : 'bg-green-600 text-white hover:bg-green-700'
-                          }`}
-                        >
-                          {isListed ? 'Already Listed' : 'List for Sale'}
-                        </button>
-                        
-                        {isListed && (
-                          <button
-                            onClick={() => {
-                              // Cancel listing functionality
-                              const listing = listings.find(l => l.tokenId === nft.tokenId);
-                              if (listing) {
-                                cancelListing(listing.listingId);
-                              }
-                            }}
-                            className="w-full bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
-                          >
-                            Cancel Listing
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => {
-                            // Transfer NFT functionality
-                            const recipient = prompt('Enter recipient address:');
-                            if (recipient) {
-                              // Implement transfer function
-                              toast.info('Transfer functionality coming soon');
-                            }
-                          }}
-                          className="w-full bg-gray-600 text-white py-2 px-4 rounded-md hover:bg-gray-700 transition-colors"
-                        >
-                          Transfer
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      );
-
-    const renderMintingHistoryTab = () => (
-        <div className="space-y-6">
-            <h3 className="text-xl font-semibold text-gray-800">My Minting History</h3>
-            {userMintingHistory.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    <p>No minting history found</p>
+                    <h4 className="text-2xl font-bold text-gray-800 mb-2">No NFTs Yet</h4>
+                    <p className="text-gray-600 text-lg">You don't own any NFTs yet</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {userNFTs.map((nft) => {
+                        // Check if this NFT is already listed for sale
+                        const isListed = listings.some(listing => 
+                            listing.tokenId === nft.tokenId && listing.isActive
+                        );
+                        
+                        return (
+                            <div key={nft.tokenId} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl shadow-gray-500/20 overflow-hidden hover:shadow-2xl hover:shadow-gray-500/30 transition-all duration-300 hover:scale-105 group">
+                                <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
+                                    {nft.image ? (
+                                        <img
+                                            src={convertIPFSUrl(nft.image)}
+                                            alt={nft.name}
+                                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                                            onError={(e) => {
+                                                e.target.src = getFallbackImage(nft.name || 'NFT', nft.rarity || 1);
+                                            }}
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <span className="text-gray-500 text-lg font-medium">No Image</span>
+                                        </div>
+                                    )}
+                                    
+                                    {/* Status Badge */}
+                                    {isListed && (
+                                        <div className="absolute top-3 left-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                            Listed
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="p-6">
+                                    <h4 className="font-bold text-xl text-gray-800 mb-3 line-clamp-2">
+                                        {nft.name || `NFT #${nft.tokenId}`}
+                                    </h4>
+                                    <p className="text-gray-600 text-sm mb-4 line-clamp-3">
+                                        {nft.description || 'No description available'}
+                                    </p>
+                                    
+                                    {/* Show listing status */}
+                                    {isListed && (
+                                        <div className="mb-4 p-3 bg-gradient-to-r from-green-50/80 to-emerald-50/80 border border-green-200/50 rounded-xl">
+                                            <p className="text-green-800 text-sm font-medium">
+                                                ✅ Listed for Sale
+                                            </p>
+                                            <p className="text-green-600 text-xs mt-1">
+                                                Price: {listings.find(l => l.tokenId === nft.tokenId)?.price} SEI
+                                            </p>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={() => {
+                                                if (isListed) {
+                                                    // If already listed, show current listing info
+                                                    const listing = listings.find(l => l.tokenId === nft.tokenId);
+                                                    toast.info(`This NFT is already listed for ${listing?.price} SEI`);
+                                                } else {
+                                                    // If not listed, prompt for price
+                                                    const price = prompt('Enter price in SEI:');
+                                                    if (price && !isNaN(price)) {
+                                                        listNFTForSale(nft.tokenId, price);
+                                                    }
+                                                }
+                                            }}
+                                            disabled={isListed}
+                                            className={`w-full py-3 px-6 rounded-xl transition-all duration-300 font-medium ${
+                                                isListed 
+                                                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
+                                                    : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                                            }`}
+                                        >
+                                            {isListed ? 'Already Listed' : 'List for Sale'}
+                                        </button>
+                                        
+                                        {isListed && (
+                                            <button
+                                                onClick={() => {
+                                                    // Cancel listing functionality
+                                                    const listing = listings.find(l => l.tokenId === nft.tokenId);
+                                                    if (listing) {
+                                                        cancelListing(listing.listingId);
+                                                    }
+                                                }}
+                                                className="w-full bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                            >
+                                                Cancel Listing
+                                            </button>
+                                        )}
+                                        
+                                        <button
+                                            onClick={() => {
+                                                // Transfer NFT functionality
+                                                const recipient = prompt('Enter recipient address:');
+                                                if (recipient) {
+                                                    // Implement transfer function
+                                                    toast.info('Transfer functionality coming soon');
+                                                }
+                                            }}
+                                            className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-medium py-3 px-6 rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+                                        >
+                                            Transfer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+
+    const renderMintingHistoryTab = () => (
+        <div className="space-y-8">
+            <div className="text-center">
+                <h3 className="text-3xl font-bold text-gray-800 mb-4">My Minting History</h3>
+                <p className="text-gray-600 text-lg">Track all the NFTs you've minted on CodeXero</p>
+            </div>
+            
+            {userMintingHistory.length === 0 ? (
+                <div className="text-center py-16">
+                    <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-gray-400/20 to-gray-500/20 rounded-full border border-gray-400/30 backdrop-blur-lg mb-6">
+                        <span className="text-4xl">📜</span>
+                    </div>
+                    <h4 className="text-2xl font-bold text-gray-800 mb-2">No Minting History</h4>
+                    <p className="text-gray-600 text-lg">No minting history found</p>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
                     {userMintingHistory.map((nft) => (
-                        <div key={nft.tokenId} className="bg-white rounded-lg shadow-md overflow-hidden">
-                            <div className="aspect-square bg-gray-200">
+                        <div key={nft.tokenId} className="bg-white/90 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-xl shadow-gray-500/20 overflow-hidden hover:shadow-2xl hover:shadow-gray-500/30 transition-all duration-300 hover:scale-105 group">
+                            <div className="aspect-square bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
                                 {nft.image ? (
                                     <img
                                         src={convertIPFSUrl(nft.image)}
                                         alt={nft.name}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                                         onError={(e) => {
                                             e.target.src = getFallbackImage(nft.name || 'NFT', nft.rarity || 1);
                                         }}
                                     />
                                 ) : (
-                                    <div className={`w-full h-full flex items-center justify-center ${getFallbackImage('NFT', 1)}`}>
-                                        <span className="text-gray-500 text-sm">No Image</span>
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <span className="text-gray-500 text-lg font-medium">No Image</span>
                                     </div>
                                 )}
+                                
+                                {/* Minted Badge */}
+                                <div className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-violet-600 text-white px-3 py-1 rounded-full text-sm font-bold shadow-lg">
+                                    Minted
+                                </div>
                             </div>
-                            <div className="p-4">
-                                <h4 className="font-semibold text-lg text-gray-800 mb-2">
+                            
+                            <div className="p-6">
+                                <h4 className="font-bold text-xl text-gray-800 mb-3 line-clamp-2">
                                     {nft.name || `NFT #${nft.tokenId}`}
                                 </h4>
-                                <p className="text-gray-600 text-sm mb-3">
+                                <p className="text-gray-600 text-sm mb-4 line-clamp-3">
                                     {nft.description || 'No description available'}
                                 </p>
-                                <div className="text-sm text-gray-500">
-                                    <p>Token ID: {nft.tokenId}</p>
-                                    <p>Minted by: {accountAddress.slice(0, 6)}...{accountAddress.slice(-4)}</p>
+                                
+                                <div className="space-y-2 text-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500">Token ID:</span>
+                                        <span className="text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
+                                            {nft.tokenId}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-gray-500">Minted by:</span>
+                                        <span className="text-gray-700 font-mono bg-gray-100 px-2 py-1 rounded">
+                                            {accountAddress.slice(0, 6)}...{accountAddress.slice(-4)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -484,46 +542,66 @@ export default function Marketplace({ contractAddress }) {
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
-            <div className="mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">NFT Marketplace</h2>
-                <p className="text-gray-600">Buy, sell, and trade your CodeXero NFTs</p>
+            {/* Header Section */}
+            <div className="text-center mb-12">
+                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-400/20 to-indigo-500/20 rounded-full border border-blue-400/30 backdrop-blur-lg mb-6">
+                    <span className="text-3xl">🏪</span>
+                </div>
+                <h2 className="text-4xl font-bold text-gray-800 mb-4 bg-gradient-to-r from-gray-800 to-blue-500 bg-clip-text text-transparent">
+                    NFT Marketplace
+                </h2>
+                <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+                    Buy, sell, and trade your CodeXero NFTs in a secure and user-friendly marketplace
+                </p>
+                <div className="w-32 h-1 bg-gradient-to-r from-blue-400 to-indigo-500 mx-auto rounded-full mt-6"></div>
             </div>
 
             {!walletConnected && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                    <p className="text-yellow-800">
-                        Please connect your wallet to access marketplace features
-                    </p>
+                <div className="max-w-2xl mx-auto mb-8">
+                    <div className="bg-gradient-to-r from-yellow-50/80 to-amber-50/80 backdrop-blur-xl rounded-2xl border border-yellow-200/50 shadow-lg p-6">
+                        <div className="flex items-center space-x-3">
+                            <div className="inline-flex items-center justify-center w-10 h-10 bg-gradient-to-br from-yellow-400/20 to-amber-500/20 rounded-full border border-yellow-400/30">
+                                <span className="text-xl">🔗</span>
+                            </div>
+                            <p className="text-yellow-800 font-medium">
+                                Please connect your wallet to access marketplace features
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
 
-            <div className="mb-6">
-                <div className="border-b border-gray-200">
-                    <nav className="-mb-px flex space-x-8">
+            {/* Tab Navigation */}
+            <div className="max-w-4xl mx-auto mb-8">
+                <div className="bg-white/80 backdrop-blur-xl rounded-2xl border border-gray-200/50 shadow-lg p-2">
+                    <nav className="flex space-x-2">
                         <button
                             onClick={() => setActiveTab('marketplace')}
-                            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'marketplace'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                                activeTab === 'marketplace'
+                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
+                            }`}
                         >
                             Marketplace
                         </button>
                         <button
                             onClick={() => setActiveTab('my-nfts')}
-                            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'my-nfts'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                                activeTab === 'my-nfts'
+                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
+                            }`}
                         >
                             My NFTs
                         </button>
                         <button
                             onClick={() => setActiveTab('minting-history')}
-                            className={`py-2 px-1 border-b-2 font-medium text-sm ${activeTab === 'minting-history'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                                }`}
+                            className={`flex-1 py-3 px-6 rounded-xl font-medium transition-all duration-300 ${
+                                activeTab === 'minting-history'
+                                    ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-500/25' 
+                                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
+                            }`}
                         >
                             Minting History
                         </button>
@@ -531,6 +609,7 @@ export default function Marketplace({ contractAddress }) {
                 </div>
             </div>
 
+            {/* Tab Content */}
             {activeTab === 'marketplace' && renderMarketplaceTab()}
             {activeTab === 'my-nfts' && renderMyNFTsTab()}
             {activeTab === 'minting-history' && renderMintingHistoryTab()}
