@@ -49,10 +49,46 @@ class IPFSService {
    */
   async uploadFile(file) {
     try {
-      const result = await this.ipfs.add(file);
-      return result.path;
+      // For Pinata, we need to use their specific API endpoint
+      if (import.meta.env.VITE_JWT_ACCESS_TOKEN) {
+        return await this.uploadToPinata(file);
+      } else {
+        // Use regular IPFS client for other providers
+        const result = await this.ipfs.add(file);
+        return result.path;
+      }
     } catch (error) {
       console.error('Error uploading file to IPFS:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload file to Pinata using their API
+   * @param {File} file - File to upload
+   * @returns {Promise<string>} IPFS hash
+   */
+  async uploadToPinata(file) {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('https://api.pinata.cloud/pinning/pinFileToIPFS', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_JWT_ACCESS_TOKEN}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.IpfsHash;
+    } catch (error) {
+      console.error('Error uploading to Pinata:', error);
       throw error;
     }
   }
@@ -64,11 +100,44 @@ class IPFSService {
    */
   async uploadMetadata(metadata) {
     try {
-      const json = JSON.stringify(metadata);
-      const result = await this.ipfs.add(json);
-      return result.path;
+      if (import.meta.env.VITE_JWT_ACCESS_TOKEN) {
+        return await this.uploadMetadataToPinata(metadata);
+      } else {
+        // Use regular IPFS client for other providers
+        const json = JSON.stringify(metadata);
+        const result = await this.ipfs.add(json);
+        return result.path;
+      }
     } catch (error) {
       console.error('Error uploading metadata to IPFS:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload metadata to Pinata using their API
+   * @param {Object} metadata - JSON metadata object
+   * @returns {Promise<string>} IPFS hash
+   */
+  async uploadMetadataToPinata(metadata) {
+    try {
+      const response = await fetch('https://api.pinata.cloud/pinning/pinJSONToIPFS', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_JWT_ACCESS_TOKEN}`
+        },
+        body: JSON.stringify(metadata)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Pinata API error: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      return result.IpfsHash;
+    } catch (error) {
+      console.error('Error uploading metadata to Pinata:', error);
       throw error;
     }
   }
@@ -98,7 +167,9 @@ class IPFSService {
         attributes: packData.attributes,
         pack_id: packData.packId,
         max_supply: packData.maxSupply,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        creator: 'CodeXero',
+        collection: 'CodeXero NFTs'
       };
 
       return await this.uploadMetadata(metadata);
@@ -106,89 +177,6 @@ class IPFSService {
       console.error('Error uploading pack metadata:', error);
       throw error;
     }
-  }
-
-  /**
-   * Upload individual NFT metadata
-   * @param {Object} nftData - NFT metadata
-   * @returns {Promise<string>} IPFS hash
-   */
-  async uploadNFTMetadata(nftData) {
-    try {
-      const metadata = {
-        name: nftData.name,
-        description: nftData.description,
-        image: nftData.image,
-        external_url: nftData.externalUrl,
-        attributes: nftData.attributes,
-        rarity: nftData.rarity,
-        pack_id: nftData.packId,
-        token_id: nftData.tokenId,
-        created_at: new Date().toISOString()
-      };
-
-      return await this.uploadMetadata(metadata);
-    } catch (error) {
-      console.error('Error uploading NFT metadata:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Batch upload multiple files
-   * @param {File[]} files - Array of files to upload
-   * @returns {Promise<string[]>} Array of IPFS hashes
-   */
-  async batchUploadFiles(files) {
-    try {
-      const uploadPromises = files.map(file => this.uploadFile(file));
-      return await Promise.all(uploadPromises);
-    } catch (error) {
-      console.error('Error in batch upload:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Pin IPFS hash to ensure availability
-   * @param {string} hash - IPFS hash to pin
-   * @returns {Promise<boolean>} Success status
-   */
-  async pinHash(hash) {
-    try {
-      await this.ipfs.pin.add(hash);
-      return true;
-    } catch (error) {
-      console.error('Error pinning hash:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Upload image file with Pinata optimization
-   * @param {File} imageFile - Image file to upload
-   * @returns {Promise<string>} IPFS hash
-   */
-  async uploadImage(imageFile) {
-    try {
-      // Optimize image for NFT standards
-      const optimizedFile = await this.optimizeImageForNFT(imageFile);
-      return await this.uploadFile(optimizedFile);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Optimize image for NFT standards
-   * @param {File} imageFile - Original image file
-   * @returns {Promise<File>} Optimized image file
-   */
-  async optimizeImageForNFT(imageFile) {
-    // For now, return the original file
-    // You can add image optimization logic here later
-    return imageFile;
   }
 
   /**
@@ -218,6 +206,17 @@ class IPFSService {
       console.error('Error creating NFT metadata:', error);
       throw error;
     }
+  }
+
+  /**
+   * Optimize image for NFT (resize and compress)
+   * @param {File} imageFile - Image file to optimize
+   * @returns {Promise<File>} Optimized image file
+   */
+  async optimizeImageForNFT(imageFile) {
+    // This is a placeholder for image optimization
+    // You can implement actual image optimization here
+    return imageFile;
   }
 }
 

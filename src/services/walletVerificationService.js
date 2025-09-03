@@ -13,11 +13,24 @@ const CONTRACT_ABI = [
   "function mintingEnabled() view returns (bool)"
 ];
 
+// Sei testnet configuration
+const SEI_TESTNET_CONFIG = {
+  chainId: 1328,
+  chainName: 'Sei Testnet',
+  nativeCurrency: {
+    name: 'SEI',
+    symbol: 'SEI',
+    decimals: 18,
+  },
+  rpcUrls: ['https://evm-rpc-testnet.sei-apis.com'],
+  blockExplorerUrls: ['https://seitrace.com'],
+};
+
 class WalletVerificationService {
   constructor(contractAddress, rpcUrl) {
     this.contractAddress = contractAddress;
     this.rpcUrl = rpcUrl;
-    // Don't create provider here - we'll create it when needed
+    this.targetChainId = SEI_TESTNET_CONFIG.chainId;
   }
 
   /**
@@ -33,6 +46,57 @@ class WalletVerificationService {
   }
 
   /**
+   * Check if the current network matches the target network
+   * @returns {Promise<boolean>} True if network matches
+   */
+  async checkNetworkMatch() {
+    try {
+      const provider = this.getProvider();
+      const network = await provider.getNetwork();
+      return network.chainId === this.targetChainId;
+    } catch (error) {
+      console.warn('Error checking network:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Switch to the target network if needed
+   * @returns {Promise<boolean>} True if network switch was successful
+   */
+  async switchToTargetNetwork() {
+    if (typeof window === 'undefined' || !window.ethereum) {
+      return false;
+    }
+
+    try {
+      // Try to switch to the target network
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: `0x${this.targetChainId.toString(16)}` }],
+      });
+      return true;
+    } catch (switchError) {
+      // If the network doesn't exist, add it
+      if (switchError.code === 4902) {
+        try {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [SEI_TESTNET_CONFIG],
+          });
+          return true;
+        } catch (addError) {
+          console.error('Error adding network:', addError);
+          return false;
+        }
+      } else {
+        console.error('Error switching network:', switchError);
+        return false;
+      }
+    }
+  }
+
+  /**
    * Get contract instance with current provider
    * @returns {Object} ethers contract instance
    */
@@ -42,12 +106,43 @@ class WalletVerificationService {
   }
 
   /**
+   * Get contract instance with signer for transactions
+   * @returns {Object} ethers contract instance with signer
+   */
+  getContractWithSigner() {
+    const provider = this.getProvider();
+    const signer = provider.getSigner();
+    return new ethers.Contract(this.contractAddress, CONTRACT_ABI, signer);
+  }
+
+  /**
    * Check if wallet is eligible for minting
    * @param {string} walletAddress - Wallet address to check
    * @returns {Promise<Object>} Eligibility status
    */
   async checkWalletEligibility(walletAddress) {
     try {
+      // First check if we're on the correct network
+      const isCorrectNetwork = await this.checkNetworkMatch();
+      if (!isCorrectNetwork) {
+        // Try to switch to the target network
+        const switchSuccess = await this.switchToTargetNetwork();
+        if (!switchSuccess) {
+          return {
+            success: false,
+            error: `Please switch to ${SEI_TESTNET_CONFIG.chainName} (Chain ID: ${this.targetChainId}) to check wallet eligibility`
+          };
+        }
+      }
+
+      // Validate the wallet address format
+      if (!ethers.utils.isAddress(walletAddress)) {
+        return {
+          success: false,
+          error: 'Invalid wallet address format'
+        };
+      }
+
       const [hasNFTs, tokenBalance] = await this.getContract().checkWalletEligibility(walletAddress);
       
       return {
@@ -58,6 +153,15 @@ class WalletVerificationService {
       };
     } catch (error) {
       console.error('Error checking wallet eligibility:', error);
+      
+      // Handle specific ENS errors
+      if (error.code === 'UNSUPPORTED_OPERATION' && error.message.includes('network does not support ENS')) {
+        return {
+          success: false,
+          error: `Network does not support ENS. Please ensure you're connected to ${SEI_TESTNET_CONFIG.chainName}`
+        };
+      }
+      
       return {
         success: false,
         error: error.message
@@ -72,6 +176,27 @@ class WalletVerificationService {
    */
   async verifyWalletForMinting(walletAddress) {
     try {
+      // First check if we're on the correct network
+      const isCorrectNetwork = await this.checkNetworkMatch();
+      if (!isCorrectNetwork) {
+        // Try to switch to the target network
+        const switchSuccess = await this.switchToTargetNetwork();
+        if (!switchSuccess) {
+          return {
+            success: false,
+            error: `Please switch to ${SEI_TESTNET_CONFIG.chainName} (Chain ID: ${this.targetChainId}) to verify wallet eligibility`
+          };
+        }
+      }
+
+      // Validate the wallet address format
+      if (!ethers.utils.isAddress(walletAddress)) {
+        return {
+          success: false,
+          error: 'Invalid wallet address format'
+        };
+      }
+
       const [eligible, reason] = await this.getContract().verifyWalletForMinting(walletAddress);
       
       return {
@@ -82,6 +207,15 @@ class WalletVerificationService {
       };
     } catch (error) {
       console.error('Error verifying wallet for minting:', error);
+      
+      // Handle specific ENS errors
+      if (error.code === 'UNSUPPORTED_OPERATION' && error.message.includes('network does not support ENS')) {
+        return {
+          success: false,
+          error: `Network does not support ENS. Please ensure you're connected to ${SEI_TESTNET_CONFIG.chainName}`
+        };
+      }
+      
       return {
         success: false,
         error: error.message
@@ -96,7 +230,11 @@ class WalletVerificationService {
    */
   async getReferralData(referrerAddress) {
     try {
-      const referralData = await this.getContract().getReferralData(referrerAddress);
+      console.log('Using direct RPC provider for referral data');
+      const provider = new ethers.providers.JsonRpcProvider(this.rpcUrl);
+      const contract = new ethers.Contract(this.contractAddress, CONTRACT_ABI, provider);
+      
+      const referralData = await contract.getReferralData(referrerAddress);
       
       return {
         success: true,

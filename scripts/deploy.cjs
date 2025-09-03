@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 async function main() {
-  console.log(" Deploying CodeXero NFT Contract...");
+  console.log("�� Deploying CodeXero NFT Contract to SEI Testnet...");
 
   // Get the contract factory
   const CodeXeroNFT = await ethers.getContractFactory("CodeXeroNFT");
@@ -49,20 +49,6 @@ async function main() {
   await codeXeroNFT.toggleMinting();
   console.log("✅ Minting enabled");
 
-  // Create some referral addresses (example)
-  const referralAddresses = [
-    "0xe678A4f8988E1BB6CD999A0CD0E2C53e71377AEF", "0x3E0314C782F4885cB15cf36Dd6D6097E0314FE21"
-  ];
-
-  for (const addr of referralAddresses) {
-    try {
-      await codeXeroNFT.createReferral(addr);
-      console.log(`✅ Referral created for: ${addr}`);
-    } catch (error) {
-      console.log(`⚠️ Failed to create referral for ${addr}:`, error.message);
-    }
-  }
-
   // Upload default NFT metadata to IPFS if credentials are configured
   if (process.env.JWT_ACCESS_TOKEN || (process.env.IPFS_PROJECT_ID && process.env.IPFS_PROJECT_SECRET)) {
     console.log("📤 Uploading NFT metadata to IPFS...");
@@ -77,19 +63,19 @@ async function main() {
   console.log("🎉 Contract deployment and initialization complete!");
   console.log("\n📋 Next steps:");
   console.log("1. Update .env.local with contract address:", codeXeroNFT.address);
-  console.log("2. Verify contract on block explorer");
-  console.log("3. Test minting functionality");
-  console.log("4. Deploy to mainnet when ready");
+  console.log("2. Verify contract on SEI block explorer (seitrace.com)");
+  console.log("3. Test minting functionality with SEI");
+  console.log("4. Deploy to SEI mainnet when ready");
 }
 
 async function uploadNFTMetadataToIPFS(contract) {
   // This function would integrate with Pinata to upload metadata
   // For now, we'll just log the intention
-  console.log("📋 NFT metadata ready for IPFS upload");
-  console.log("   - NFT 1: CodeXero Explorer (Common) - 0.01 ETH");
-  console.log("   - NFT 2: CodeXero Warrior (Rare) - 0.02 ETH");
-  console.log("   - NFT 3: CodeXero Mage (Epic) - 0.03 ETH");
-  console.log("   - NFT 4: CodeXero Legend (Legendary) - 0.05 ETH");
+  console.log("�� NFT metadata ready for IPFS upload");
+  console.log("   - NFT 1: CodeXero Explorer (Common) - 0.01 SEI");
+  console.log("   - NFT 2: CodeXero Warrior (Rare) - 0.02 SEI");
+  console.log("   - NFT 3: CodeXero Mage (Epic) - 0.03 SEI");
+  console.log("   - NFT 4: CodeXero Legend (Legendary) - 0.05 SEI");
   
   // You can implement actual IPFS upload logic here using your credentials
   if (process.env.JWT_ACCESS_TOKEN) {

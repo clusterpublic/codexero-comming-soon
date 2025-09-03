@@ -1,12 +1,12 @@
 {
   "contractName": "CodeXeroNFT",
-  "contractAddress": "0xB2f3aB24EA87475a6cCdADcD442F7Ffd64BE93B3",
+  "contractAddress": "0x484287F86640B3F4e6d1E3a5b9c4AE4589E73282",
   "network": {
     "name": "unknown",
     "chainId": 1328
   },
   "deployer": "0x3E0314C782F4885cB15cf36Dd6D6097E0314FE21",
-  "deploymentTime": "2025-09-02T13:25:41.847Z",
+  "deploymentTime": "2025-09-03T09:24:28.437Z",
   "constructorArgs": [],
   "verified": false
 }

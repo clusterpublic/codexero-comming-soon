@@ -7,48 +7,44 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 /**
  * @title CodeXeroNFT
- * @dev NFT contract with pre-existing NFT collection, wallet verification, and referral system
+ * @dev NFT contract with pre-existing NFT collection, wallet verification, referral bypass, and marketplace
  * @author CodeXero Team
  */
-contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
+contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712, ReentrancyGuard {
     using Counters for Counters.Counter;
     using ECDSA for bytes32;
 
     // Constants
     uint256 public constant MAX_SUPPLY = 10000;
-    uint256 public maxMintPerWallet = 5;
-    
+    string public constant DOMAIN_NAME = "CodeXeroNFT";
+    string public constant VERSION = "1";
+    uint256 public constant MARKETPLACE_FEE = 250; // 2.5% (250 basis points)
+    uint256 public constant BASIS_POINTS = 10000;
+
     // State variables
+    bool public mintingEnabled = true;
     Counters.Counter private _tokenIds;
-    string public baseURI;
-    bool public mintingEnabled = false;
-    
-    // Pre-existing NFT collection
-    struct PreExistingNFT {
-        uint256 nftId;           // Unique identifier for this NFT design
-        string name;             // NFT name
-        string description;      // NFT description
-        string image;            // IPFS image hash
-        string metadata;         // IPFS metadata hash
-        uint256 rarity;          // 1=Common, 2=Rare, 3=Epic, 4=Legendary
-        bool isAvailable;        // Can this NFT still be minted?
-        uint256 maxSupply;       // How many of this design can exist
-        uint256 currentSupply;   // How many have been minted
-        uint256 price;           // Individual price for this NFT
-        string attributes;       // JSON attributes string
-    }
-    
+    string private baseURI;
+
     // Structs
-    struct ReferralData {
-        address referrer;
-        uint256 referralCount;
-        uint256 totalEarnings;
-        bool isActive;
+    struct PreExistingNFT {
+        uint256 nftId;
+        string name;
+        string description;
+        string image;
+        string metadata;
+        uint256 rarity;
+        bool isAvailable;
+        uint256 maxSupply;
+        uint256 currentSupply;
+        uint256 price;
+        string attributes;
     }
-    
+
     struct MintRequest {
         address to;
         uint256 nftId;
@@ -56,73 +52,122 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         uint256 nonce;
         uint256 deadline;
     }
-    
+
+    struct NFTListing {
+        uint256 tokenId;
+        address seller;
+        uint256 price;
+        bool isActive;
+        uint256 listingId;
+        uint256 createdAt;
+    }
+
     // Mappings
-    mapping(uint256 => PreExistingNFT) public preExistingNFTs;  // nftId => NFT data
+    mapping(uint256 => PreExistingNFT) public preExistingNFTs; // nftId => NFT data
     mapping(uint256 => uint256) public tokenToNFTId;            // tokenId => nftId
-    mapping(address => uint256) public mintedCount;
-    mapping(address => ReferralData) public referrals;
-    mapping(bytes32 => bool) public usedNonces;
-    mapping(address => bool) public verifiedWallets;
     mapping(address => bool) public nftHolders;
-    mapping(address => uint256) public tokenBalances;
+    mapping(address => bool) public verifiedWallets;
+    mapping(bytes32 => bool) public usedNonces;
     
+    // Marketplace mappings
+    mapping(uint256 => NFTListing) public nftListings; // tokenId => listing
+    mapping(uint256 => uint256) public listingIdToTokenId; // listingId => tokenId
+    mapping(address => uint256[]) public userListings; // user => array of listing IDs
+    mapping(address => uint256[]) public userNFTs;
+
+    // Array to track all NFT IDs
+    uint256[] public nftIds;
+    
+    // Marketplace state
+    Counters.Counter private _listingIds;
+    uint256 public totalListings = 0;
+
     // Events
     event NFTMinted(address indexed to, uint256 indexed tokenId, uint256 indexed nftId);
-    event ReferralCreated(address indexed referrer, address indexed referee);
-    event ReferralBonusPaid(address indexed referrer, uint256 amount);
     event WalletVerified(address indexed wallet, bool hasNFTs, uint256 tokenBalance);
     event PreExistingNFTAdded(uint256 indexed nftId, string name, uint256 rarity, uint256 price);
     event PreExistingNFTUpdated(uint256 indexed nftId);
+    event NFTDeleted(uint256 indexed nftId);
     event MintingToggled(bool enabled);
     
+    // Marketplace events
+    event NFTListed(uint256 indexed listingId, uint256 indexed tokenId, address indexed seller, uint256 price);
+    event NFTUnlisted(uint256 indexed listingId, uint256 indexed tokenId, address indexed seller);
+    event NFTSold(uint256 indexed listingId, uint256 indexed tokenId, address indexed seller, address buyer, uint256 price);
+    event ListingPriceUpdated(uint256 indexed listingId, uint256 indexed tokenId, uint256 newPrice);
+
     // Modifiers
     modifier mintingAllowed() {
-        require(mintingEnabled, "Minting is not enabled");
+        require(mintingEnabled, "Minting is currently disabled");
         _;
     }
-    
-    modifier validNFT(uint256 nftId) {
-        require(preExistingNFTs[nftId].nftId != 0, "Invalid NFT ID");
-        _;
-    }
-    
+
     modifier withinSupplyLimit() {
         require(_tokenIds.current() < MAX_SUPPLY, "Max supply reached");
         _;
     }
-    
-    modifier validMintRequest(MintRequest calldata request) {
-        require(request.deadline > block.timestamp, "Request expired");
-        require(request.to != address(0), "Invalid recipient");
-        require(mintedCount[request.to] < maxMintPerWallet, "Max mint per wallet reached");
+
+    modifier validNFT(uint256 nftId) {
+        require(preExistingNFTs[nftId].nftId != 0, "NFT does not exist");
         _;
     }
-    
-    constructor() ERC721("CodeXero NFT", "CODEXERO") EIP712("CodeXeroNFT", "1.0.0") {
+
+    modifier validMintRequest(MintRequest calldata request) {
+        require(request.deadline > block.timestamp, "Request expired");
+        require(request.to != address(0), "Invalid recipient address");
+        _;
+    }
+
+    modifier onlyNFTOwner(uint256 tokenId) {
+        require(_exists(tokenId), "Token does not exist");
+        require(ownerOf(tokenId) == msg.sender, "Not the NFT owner");
+        _;
+    }
+
+    modifier validListing(uint256 listingId) {
+        require(nftListings[listingIdToTokenId[listingId]].isActive, "Listing not active");
+        _;
+    }
+
+    /**
+     * @dev Constructor
+     */
+    constructor() ERC721("CodeXero NFT", "CODEXERO") EIP712(DOMAIN_NAME, VERSION) {
         _initializePreExistingNFTs();
     }
-    
+
     /**
-     * @dev Initialize your pre-existing NFT collection
+     * @dev Initialize pre-existing NFTs with supply = 1
      */
     function _initializePreExistingNFTs() internal {
-        // Add your pre-existing NFTs here - you can modify these or add more
-        _addPreExistingNFT(1, "CodeXero Explorer", "A brave explorer in the CodeXero universe", 
-                          "ipfs://QmExplorerImage", "ipfs://QmExplorerMetadata", 1, 100, 0.01 ether, "{}");
-        
-        _addPreExistingNFT(2, "CodeXero Warrior", "A fierce warrior protecting the CodeXero realm", 
-                          "ipfs://QmWarriorImage", "ipfs://QmWarriorMetadata", 2, 50, 0.02 ether, "{}");
-        
-        _addPreExistingNFT(3, "CodeXero Mage", "A powerful mage with ancient knowledge", 
-                          "ipfs://QmMageImage", "ipfs://QmMageMetadata", 3, 25, 0.03 ether, "{}");
-        
-        _addPreExistingNFT(4, "CodeXero Legend", "The legendary guardian of CodeXero", 
-                          "ipfs://QmLegendImage", "ipfs://QmLegendMetadata", 4, 10, 0.05 ether, "{}");
+        _addPreExistingNFT(1, "CodeXero Explorer", "A brave explorer in the CodeXero universe", "ipfs://QmExplorerImage", "ipfs://QmExplorerMetadata", 1, 1, 0.01e18, "Type: Explorer, Rarity: Common, Element: Earth");
+        _addPreExistingNFT(2, "CodeXero Warrior", "A fierce warrior defending the CodeXero realm", "ipfs://QmWarriorImage", "ipfs://QmWarriorMetadata", 2, 1, 0.02e18, "Type: Warrior, Rarity: Rare, Class: Combat");
+        _addPreExistingNFT(3, "CodeXero Mage", "A powerful mage with ancient knowledge", "ipfs://QmMageImage", "ipfs://QmMageMetadata", 3, 1, 0.03e18, "Type: Mage, Rarity: Epic, School: Arcane");
+        _addPreExistingNFT(4, "CodeXero Legend", "A legendary hero of the CodeXero saga", "ipfs://QmLegendImage", "ipfs://QmLegendMetadata", 4, 1, 0.05e18, "Type: Legend, Rarity: Legendary, Power: Ultimate");
     }
-    
+
     /**
-     * @dev Add a pre-existing NFT to the collection
+     * @dev Add new pre-existing NFT
+     */
+    function addPreExistingNFT(
+        uint256 nftId,
+        string calldata name,
+        string calldata description,
+        string calldata image,
+        string calldata metadata,
+        uint256 rarity,
+        uint256 maxSupply,
+        uint256 price,
+        string calldata attributes
+    ) public onlyOwner {
+        require(bytes(name).length > 0, "Empty name");
+        require(preExistingNFTs[nftId].nftId == 0, "NFT ID already exists");
+        
+        _addPreExistingNFT(nftId, name, description, image, metadata, rarity, maxSupply, price, attributes);
+    }
+
+    /**
+     * @dev Internal function to add pre-existing NFT
      */
     function _addPreExistingNFT(
         uint256 nftId,
@@ -149,119 +194,80 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
             attributes: attributes
         });
         
+        // Add ID to the tracking array
+        nftIds.push(nftId);
+        
         emit PreExistingNFTAdded(nftId, name, rarity, price);
     }
-    
+
     /**
-     * @dev Check if wallet holds CodeXero NFTs or tokens
-     * @param wallet Address to check
-     * @return hasNFTs Whether wallet holds NFTs
-     * @return tokenBalance Token balance
+     * @dev Add verified wallet address
      */
-    function checkWalletEligibility(address wallet) public view returns (bool hasNFTs, uint256 tokenBalance) {
-        hasNFTs = nftHolders[wallet];
-        tokenBalance = tokenBalances[wallet];
-    }
-    
-    /**
-     * @dev Verify wallet eligibility for minting
-     * @param wallet Address to verify
-     * @return eligible Whether wallet is eligible
-     * @return reason Reason for ineligibility if any
-     */
-    function verifyWalletForMinting(address wallet) public view returns (bool eligible, string memory reason) {
-        if (verifiedWallets[wallet]) {
-            return (true, "Wallet pre-verified");
-        }
-        
-        (bool hasNFTs, uint256 tokenBalance) = checkWalletEligibility(wallet);
-        
-        if (hasNFTs) {
-            return (true, "Wallet holds CodeXero NFTs");
-        }
-        
-        if (tokenBalance >= 100 * 10**18) { // 100 tokens minimum
-            return (true, "Wallet holds sufficient tokens");
-        }
-        
-        return (false, "Wallet does not meet eligibility requirements");
-    }
-    
-    /**
-     * @dev Override wallet verification for referral users
-     * @param wallet Wallet address
-     * @param referrer Referrer address
-     * @return success Whether override was successful
-     */
-    function overrideWalletVerification(address wallet, address referrer) public onlyOwner returns (bool success) {
-        require(referrals[referrer].isActive, "Referrer not active");
-        require(referrals[referrer].referralCount > 0, "Referrer has no referrals");
+    function addVerifiedWallet(address wallet) public {
+        require(wallet != address(0), "Invalid wallet address");
+        require(!verifiedWallets[wallet], "Wallet already verified");
         
         verifiedWallets[wallet] = true;
         emit WalletVerified(wallet, true, 0);
-        
-        return true;
     }
-    
+
     /**
-     * @dev Create referral link
-     * @param referrer Referrer address
+     * @dev Verify wallet for minting
      */
-    function createReferral(address referrer) public onlyOwner {
-        require(referrer != address(0), "Invalid referrer address");
-        require(!referrals[referrer].isActive, "Referral already exists");
-        
-        referrals[referrer] = ReferralData({
-            referrer: referrer,
-            referralCount: 0,
-            totalEarnings: 0,
-            isActive: true
-        });
+    function verifyWalletForMinting(address wallet) public view returns (bool eligible, string memory reason) {
+        // Check if wallet is directly verified
+        if (verifiedWallets[wallet]) {
+            return (true, "Wallet directly verified");
+        }
+
+        // Check if wallet holds any CodeXero NFTs
+        if (nftHolders[wallet]) {
+            return (true, "Wallet holds CodeXero NFTs");
+        }
+
+        // Check if wallet holds specific tokens
+        uint256 balance = balanceOf(wallet);
+        if (balance > 0) {
+            return (true, "Wallet holds CodeXero tokens");
+        }
+
+        return (false, "Wallet not eligible for minting");
     }
-    
+
     /**
-     * @dev Mint a specific pre-existing NFT
-     * @param nftId The ID of the pre-existing NFT to mint
-     * @param referrer Referrer address (optional)
+     * @dev Mint specific NFT
      */
     function mintSpecificNFT(uint256 nftId, address referrer) 
         public 
         payable 
         mintingAllowed 
         withinSupplyLimit 
-        validNFT(nftId) 
+        validNFT(nftId)
     {
         PreExistingNFT storage nft = preExistingNFTs[nftId];
         
-        // Validations
+        // Check if NFT is available
         require(nft.isAvailable, "NFT is not available for minting");
         require(nft.currentSupply < nft.maxSupply, "NFT supply limit reached");
-        require(msg.value >= nft.price, "Insufficient payment");
-        require(mintedCount[msg.sender] < maxMintPerWallet, "Max mint per wallet reached");
         
-        // Check wallet eligibility (skip if referral)
+        // Check price
+        require(msg.value == nft.price, "Incorrect payment amount");
+        
+        // Check wallet eligibility (skip if referral bypass)
         if (referrer == address(0)) {
             (bool eligible, ) = verifyWalletForMinting(msg.sender);
             require(eligible, "Wallet not eligible for minting");
-        } else {
-            require(referrals[referrer].isActive, "Invalid referrer");
-            // Override wallet verification for referral users
-            verifiedWallets[msg.sender] = true;
         }
+        // If referrer is provided, bypass wallet verification
         
-        // Mint the NFT
+        // Mint NFT
         _mintNFTInternal(msg.sender, nftId, nft);
-        
-        // Handle referral bonus (20% of NFT price)
-        if (referrer != address(0)) {
-            _handleReferralBonus(referrer, nft.price);
-        }
         
         emit NFTMinted(msg.sender, _tokenIds.current(), nftId);
     }
-    
+
     /**
-     * @dev Internal function to mint NFT (reduces stack usage)
+     * @dev Internal function to mint NFT
      */
     function _mintNFTInternal(address to, uint256 nftId, PreExistingNFT storage nft) internal {
         _tokenIds.increment();
@@ -273,28 +279,19 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         // Update mappings
         tokenToNFTId[newTokenId] = nftId;
         nft.currentSupply++;
-        mintedCount[to]++;
         nftHolders[to] = true;
-    }
-    
-    /**
-     * @dev Handle referral bonus (reduces stack usage)
-     */
-    function _handleReferralBonus(address referrer, uint256 nftPrice) internal {
-        uint256 referralBonus = nftPrice * 20 / 100; // 20% bonus
-        referrals[referrer].referralCount++;
-        referrals[referrer].totalEarnings += referralBonus;
+
+            // Track user's NFTs - ADD THIS
+        userNFTs[to].push(newTokenId);
         
-        payable(referrer).transfer(referralBonus);
-        
-        emit ReferralBonusPaid(referrer, referralBonus);
-        emit ReferralCreated(referrer, msg.sender);
+        // If supply is reached, mark as unavailable
+        if (nft.currentSupply >= nft.maxSupply) {
+            nft.isAvailable = false;
+        }
     }
-    
+
     /**
      * @dev Gasless minting using EIP-712 signature
-     * @param request Mint request data
-     * @param signature Signature for verification
      */
     function mintWithSignature(MintRequest calldata request, bytes calldata signature) 
         public 
@@ -320,14 +317,10 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         require(!usedNonces[keccak256(abi.encode(request.nonce))], "Nonce already used");
         usedNonces[keccak256(abi.encode(request.nonce))] = true;
         
-        // Check wallet eligibility (skip if referral)
+        // Check wallet eligibility (skip if referral bypass)
         if (request.referrer == address(0)) {
             (bool eligible, ) = verifyWalletForMinting(request.to);
             require(eligible, "Wallet not eligible for minting");
-        } else {
-            require(referrals[request.referrer].isActive, "Invalid referrer");
-            // Override wallet verification for referral users
-            verifiedWallets[request.to] = true;
         }
         
         PreExistingNFT storage nft = preExistingNFTs[request.nftId];
@@ -337,62 +330,184 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         // Mint NFT
         _mintNFTInternal(request.to, request.nftId, nft);
         
-        // Handle referral bonus
-        if (request.referrer != address(0)) {
-            _handleReferralBonus(request.referrer, nft.price);
-        }
-        
         emit NFTMinted(request.to, _tokenIds.current(), request.nftId);
     }
-    
+
+    // ========== MARKETPLACE FUNCTIONS ==========
+
+    /**
+     * @dev List NFT for sale
+     */
+    function listNFTForSale(uint256 tokenId, uint256 price) 
+        public 
+        onlyNFTOwner(tokenId) 
+        nonReentrant 
+    {
+        require(price > 0, "Price must be greater than 0");
+        require(!nftListings[tokenId].isActive, "NFT already listed");
+        
+        // Create listing
+        _listingIds.increment();
+        uint256 listingId = _listingIds.current();
+        
+        nftListings[tokenId] = NFTListing({
+            tokenId: tokenId,
+            seller: msg.sender,
+            price: price,
+            isActive: true,
+            listingId: listingId,
+            createdAt: block.timestamp
+        });
+        
+        listingIdToTokenId[listingId] = tokenId;
+        userListings[msg.sender].push(listingId);
+        totalListings++;
+        
+        emit NFTListed(listingId, tokenId, msg.sender, price);
+    }
+
+    /**
+     * @dev Unlist NFT from sale
+     */
+    function unlistNFT(uint256 tokenId) 
+        public 
+        onlyNFTOwner(tokenId) 
+        nonReentrant 
+    {
+        require(nftListings[tokenId].isActive, "NFT not listed");
+        
+        uint256 listingId = nftListings[tokenId].listingId;
+        
+        // Remove listing
+        delete nftListings[tokenId];
+        delete listingIdToTokenId[listingId];
+        
+        // Remove from user listings
+        _removeFromUserListings(msg.sender, listingId);
+        totalListings--;
+        
+        emit NFTUnlisted(listingId, tokenId, msg.sender);
+    }
+
+    /**
+     * @dev Buy listed NFT
+     */
+    function buyListedNFT(uint256 tokenId) 
+        public 
+        payable 
+        nonReentrant 
+    {
+        NFTListing storage listing = nftListings[tokenId];
+        require(listing.isActive, "Listing not active");
+        require(msg.sender != listing.seller, "Cannot buy your own NFT");
+        require(msg.value == listing.price, "Incorrect payment amount");
+        
+        address seller = listing.seller;
+        uint256 listingId = listing.listingId;
+        
+        // Calculate fees
+        uint256 marketplaceFee = (listing.price * MARKETPLACE_FEE) / BASIS_POINTS;
+        uint256 sellerAmount = listing.price - marketplaceFee;
+        
+        // Transfer NFT
+        _transfer(seller, msg.sender, tokenId);
+        
+        // Remove listing
+        delete nftListings[tokenId];
+        delete listingIdToTokenId[listingId];
+        _removeFromUserListings(seller, listingId);
+        totalListings--;
+        
+        // Transfer payments
+        payable(seller).transfer(sellerAmount);
+        payable(owner()).transfer(marketplaceFee);
+        
+        emit NFTSold(listingId, tokenId, seller, msg.sender, listing.price);
+    }
+
+    /**
+     * @dev Update listing price
+     */
+    function updateListingPrice(uint256 tokenId, uint256 newPrice) 
+        public 
+        onlyNFTOwner(tokenId) 
+    {
+        require(nftListings[tokenId].isActive, "NFT not listed");
+        require(newPrice > 0, "Price must be greater than 0");
+        
+        uint256 listingId = nftListings[tokenId].listingId;
+        nftListings[tokenId].price = newPrice;
+        
+        emit ListingPriceUpdated(listingId, tokenId, newPrice);
+    }
+
+    /**
+     * @dev Get all active listings
+     */
+    function getAllListings() public view returns (NFTListing[] memory) {
+        NFTListing[] memory listings = new NFTListing[](totalListings);
+        uint256 count = 0;
+        
+        for (uint256 i = 1; i <= _listingIds.current(); i++) {
+            uint256 tokenId = listingIdToTokenId[i];
+            if (nftListings[tokenId].isActive) {
+                listings[count] = nftListings[tokenId];
+                count++;
+            }
+        }
+        
+        // Resize array to actual count
+        assembly {
+            mstore(listings, count)
+        }
+        
+        return listings;
+    }
+
+    /**
+     * @dev Get user's listings
+     */
+    function getUserListings(address user) public view returns (uint256[] memory) {
+        return userListings[user];
+    }
+
+    /**
+     * @dev Get listing by token ID
+     */
+    function getListingByTokenId(uint256 tokenId) public view returns (NFTListing memory) {
+        return nftListings[tokenId];
+    }
+
+    // ========== HELPER FUNCTIONS ==========
+
+    /**
+     * @dev Remove listing from user's listing array
+     */
+    function _removeFromUserListings(address user, uint256 listingId) internal {
+        uint256[] storage userListingArray = userListings[user];
+        for (uint256 i = 0; i < userListingArray.length; i++) {
+            if (userListingArray[i] == listingId) {
+                userListingArray[i] = userListingArray[userListingArray.length - 1];
+                userListingArray.pop();
+                break;
+            }
+        }
+    }
+
+    // ========== ADMIN FUNCTIONS ==========
+
     /**
      * @dev Update wallet verification status
-     * @param wallet Wallet address
-     * @param hasNFTs Whether wallet holds NFTs
-     * @param tokenBalance Token balance
      */
-    function updateWalletVerification(address wallet, bool hasNFTs, uint256 tokenBalance) public onlyOwner {
+    function updateWalletVerification(address wallet, bool hasNFTs) public onlyOwner {
         nftHolders[wallet] = hasNFTs;
-        tokenBalances[wallet] = tokenBalance;
-        verifiedWallets[wallet] = hasNFTs || tokenBalance >= 100 * 10**18;
+        verifiedWallets[wallet] = hasNFTs;
         
-        emit WalletVerified(wallet, hasNFTs, tokenBalance);
+        emit WalletVerified(wallet, hasNFTs, 0);
     }
-    
-    /**
-     * @dev Add new pre-existing NFT
-     * @param nftId NFT ID
-     * @param name NFT name
-     * @param description NFT description
-     * @param image IPFS image hash
-     * @param metadata IPFS metadata hash
-     * @param rarity Rarity level
-     * @param maxSupply Maximum supply
-     * @param price NFT price
-     * @param attributes JSON attributes
-     */
-    function addPreExistingNFT(
-        uint256 nftId,
-        string calldata name,
-        string calldata description,
-        string calldata image,
-        string calldata metadata,
-        uint256 rarity,
-        uint256 maxSupply,
-        uint256 price,
-        string calldata attributes
-    ) public onlyOwner {
-        require(bytes(name).length > 0, "Empty name");
-        require(preExistingNFTs[nftId].nftId == 0, "NFT ID already exists");
-        
-        _addPreExistingNFT(nftId, name, description, image, metadata, rarity, maxSupply, price, attributes);
-    }
-    
+
     /**
      * @dev Update existing NFT
-     * @param nftId NFT ID to update
-     * @param isAvailable Whether NFT is available for minting
-     * @param price New price
      */
     function updateNFT(uint256 nftId, bool isAvailable, uint256 price) public onlyOwner validNFT(nftId) {
         PreExistingNFT storage nft = preExistingNFTs[nftId];
@@ -401,7 +516,30 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         
         emit PreExistingNFTUpdated(nftId);
     }
-    
+
+    /**
+     * @dev Delete NFT from contract
+     */
+    function deleteNFT(uint256 nftId) public onlyOwner validNFT(nftId) {
+        PreExistingNFT storage nft = preExistingNFTs[nftId];
+        
+        // Check if any NFTs of this type have been minted
+        require(nft.currentSupply == 0, "Cannot delete NFT with existing supply");
+        
+        // Remove from tracking array
+        for (uint256 i = 0; i < nftIds.length; i++) {
+            if (nftIds[i] == nftId) {
+                nftIds[i] = nftIds[nftIds.length - 1];
+                nftIds.pop();
+                break;
+            }
+        }
+        
+        delete preExistingNFTs[nftId];
+        
+        emit NFTDeleted(nftId);
+    }
+
     /**
      * @dev Toggle minting status
      */
@@ -409,33 +547,24 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         mintingEnabled = !mintingEnabled;
         emit MintingToggled(mintingEnabled);
     }
-    
+
     /**
      * @dev Set base URI for token URIs
-     * @param newBaseURI New base URI
      */
     function setBaseURI(string calldata newBaseURI) public onlyOwner {
         baseURI = newBaseURI;
     }
-    
+
     /**
-     * @dev Set max mint per wallet
-     * @param newMax New maximum
-     */
-    function setMaxMintPerWallet(uint256 newMax) public onlyOwner {
-        maxMintPerWallet = newMax;
-    }
-    
-    /**
-     * @dev Withdraw contract balance
+     * @dev Withdraw contract balance (SEI)
      */
     function withdraw() public onlyOwner {
         uint256 balance = address(this).balance;
-        require(balance > 0, "No balance to withdraw");
+        require(balance > 0, "No SEI balance to withdraw");
         
         payable(owner()).transfer(balance);
     }
-    
+
     /**
      * @dev Emergency pause minting
      */
@@ -443,44 +572,227 @@ contract CodeXeroNFT is ERC721, ERC721URIStorage, Ownable, EIP712 {
         mintingEnabled = false;
         emit MintingToggled(false);
     }
-    
-    // Internal functions
+
+    // ========== INTERNAL FUNCTIONS ==========
+
     function _baseURI() internal view override returns (string memory) {
         return baseURI;
     }
-    
+
     function _burn(uint256 tokenId) internal override(ERC721, ERC721URIStorage) {
         super._burn(tokenId);
     }
-    
+
     function tokenURI(uint256 tokenId) public view override(ERC721, ERC721URIStorage) returns (string memory) {
         return super.tokenURI(tokenId);
     }
-    
-    // View functions
+
+    // ========== VIEW FUNCTIONS ==========
+
     function getTotalSupply() public view returns (uint256) {
         return _tokenIds.current();
     }
-    
+
     function getRemainingSupply() public view returns (uint256) {
         return MAX_SUPPLY - _tokenIds.current();
     }
-    
-    function getReferralData(address referrer) public view returns (ReferralData memory) {
-        return referrals[referrer];
+
+    /**
+     * @dev Get all NFT data (only available ones)
+     */
+    function getAllAvailableNFTData() public view returns (PreExistingNFT[] memory) {
+        uint256 availableCount = 0;
+        
+        // Count available NFTs
+        for (uint256 i = 0; i < nftIds.length; i++) {
+            if (preExistingNFTs[nftIds[i]].isAvailable) {
+                availableCount++;
+            }
+        }
+        
+        PreExistingNFT[] memory availableNFTs = new PreExistingNFT[](availableCount);
+        uint256 count = 0;
+        
+        for (uint256 i = 0; i < nftIds.length; i++) {
+            if (preExistingNFTs[nftIds[i]].isAvailable) {
+                availableNFTs[count] = preExistingNFTs[nftIds[i]];
+                count++;
+            }
+        }
+        
+        return availableNFTs;
     }
-    
+
+    /**
+     * @dev Get all NFT data including sold out ones
+     */
+    function getAllNFTData() public view returns (PreExistingNFT[] memory) {
+        PreExistingNFT[] memory allNFTs = new PreExistingNFT[](nftIds.length);
+        
+        for (uint256 i = 0; i < nftIds.length; i++) {
+            uint256 nftId = nftIds[i];
+            allNFTs[i] = preExistingNFTs[nftId];
+        }
+        
+        return allNFTs;
+    }
+
+    /**
+     * @dev Get NFT info by ID
+     */
     function getNFTInfo(uint256 nftId) public view returns (PreExistingNFT memory) {
         require(preExistingNFTs[nftId].nftId != 0, "NFT does not exist");
         return preExistingNFTs[nftId];
     }
-    
+
+    /**
+     * @dev Get token NFT ID mapping
+     */
     function getTokenNFTId(uint256 tokenId) public view returns (uint256) {
         require(_exists(tokenId), "Token does not exist");
         return tokenToNFTId[tokenId];
     }
-    
+
+    /**
+     * @dev Get all NFT IDs
+     */
+    function getAllNFTIds() public view returns (uint256[] memory) {
+        return nftIds;
+    }
+
+    /**
+     * @dev Get NFT count
+     */
+    function getNFTCount() public view returns (uint256) {
+        return nftIds.length;
+    }
+
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721URIStorage) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
+
+// Replace the existing getUserNFTs function (around line 672)
+function getUserNFTs(address user) public view returns (uint256[] memory) {
+    return userNFTs[user];
+}
+
+// Replace the existing getUserMintingHistory function (around line 698)
+function getUserMintingHistory(address user) public view returns (uint256[] memory) {
+    return userNFTs[user]; // Same as getUserNFTs for now
+}
+
+// Add these new functions after the existing marketplace functions (around line 750)
+
+/**
+ * @dev Get user's marketplace activity (listings, purchases, sales)
+ */
+function getUserMarketplaceActivity(address user) public view returns (
+    uint256[] memory activeListings,
+    uint256[] memory soldListings,
+    uint256[] memory purchasedTokens
+) {
+    // Get user's active listings
+    activeListings = getUserListings(user);
+    
+    // For sold listings and purchases, you'd need to track these in events
+    // This is a simplified version - you might want to enhance it
+    soldListings = new uint256[](0); // Placeholder
+    purchasedTokens = new uint256[](0); // Placeholder
+    
+    return (activeListings, soldListings, purchasedTokens);
+}
+
+/**
+ * @dev Get detailed NFT info including ownership and listing status
+ */
+function getDetailedNFTInfo(uint256 tokenId) public view returns (
+    uint256 nftId,
+    string memory name,
+    string memory description,
+    string memory image,
+    string memory metadata,
+    uint256 rarity,
+    address owner,
+    bool isListed,
+    uint256 listingPrice,
+    address seller
+) {
+    require(_exists(tokenId), "Token does not exist");
+    
+    nftId = getTokenNFTId(tokenId);
+    PreExistingNFT memory nft = getNFTInfo(nftId);
+    
+    name = nft.name;
+    description = nft.description;
+    image = nft.image;
+    metadata = nft.metadata;
+    rarity = nft.rarity;
+    owner = ownerOf(tokenId);
+    
+    // Check if listed
+    try this.getListingByTokenId(tokenId) returns (NFTListing memory listing) {
+        isListed = listing.isActive;
+        listingPrice = listing.price;
+        seller = listing.seller;
+    } catch {
+        isListed = false;
+        listingPrice = 0;
+        seller = address(0);
+    }
+}
+
+// Add missing cancelListing function (alias for unlistNFT)
+function cancelListing(uint256 tokenId) public {
+    unlistNFT(tokenId);
+}
+
+// Fix buyNFT function to match frontend calls
+function buyNFT(uint256 listingId) public payable nonReentrant {
+    uint256 tokenId = listingIdToTokenId[listingId];
+    require(tokenId != 0, "Invalid listing ID");
+    
+    NFTListing storage listing = nftListings[tokenId];
+    require(listing.isActive, "Listing not active");
+    require(msg.sender != listing.seller, "Cannot buy your own NFT");
+    require(msg.value == listing.price, "Incorrect payment amount");
+    
+    address seller = listing.seller;
+    
+    // Calculate fees
+    uint256 marketplaceFee = (listing.price * MARKETPLACE_FEE) / BASIS_POINTS;
+    uint256 sellerAmount = listing.price - marketplaceFee;
+    
+    // Transfer NFT
+    _transfer(seller, msg.sender, tokenId);
+    
+    // Update userNFTs mapping
+    _removeFromUserNFTs(seller, tokenId);
+    userNFTs[msg.sender].push(tokenId);
+    
+    // Remove listing
+    delete nftListings[tokenId];
+    delete listingIdToTokenId[listingId];
+    _removeFromUserListings(seller, listingId);
+    totalListings--;
+    
+    // Transfer payments
+    payable(seller).transfer(sellerAmount);
+    payable(owner()).transfer(marketplaceFee);
+    
+    emit NFTSold(listingId, tokenId, seller, msg.sender, listing.price);
+}
+
+// Add helper function to remove NFT from user's array
+function _removeFromUserNFTs(address user, uint256 tokenId) internal {
+    uint256[] storage userTokens = userNFTs[user];
+    for (uint256 i = 0; i < userTokens.length; i++) {
+        if (userTokens[i] == tokenId) {
+            userTokens[i] = userTokens[userTokens.length - 1];
+            userTokens.pop();
+            break;
+        }
+    }
+}
+
 }
