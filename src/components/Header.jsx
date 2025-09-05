@@ -24,7 +24,7 @@ export default function Header({ onWaitlistOpen, showWaitlistButton = true, clas
   return (
     <header className={`header ${className}`}>
       <div className="logo">
-        <div className="logo-animated-container">
+        <div className="logo-animated-container" onClick={()=>navigate("/")}>
           <img src={logo} alt="CodeZero" className="logo-img-animated" />
           <div className="bounce-wave"></div>
           <span className="logo-text">CodeXero</span>
