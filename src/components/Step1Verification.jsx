@@ -122,21 +122,21 @@ console.log("user", user)
 
 
 
-  // Check if all steps are completed (excluding Telegram for now)
+  // Fix 1: Update the verification completion logic to include Telegram
   useEffect(() => {
-    // For now, we'll skip Telegram verification and only require Twitter steps
+    // Include all verification steps including Telegram
     const requiredSteps = {
       twitterConnect: verificationStates.twitterConnect,
       twitterFollow: verificationStates.twitterFollow,
       twitterPost: verificationStates.twitterPost,
-      customUsername: verificationStates.customUsername
-      // telegramJoin is skipped for now
+      customUsername: verificationStates.customUsername,
+      telegramJoin: verificationStates.telegramJoin
     };
     
     const allRequiredCompleted = Object.values(requiredSteps).every(state => state);
-      if (allRequiredCompleted && onVerificationComplete) {
-    onVerificationComplete();
-  }
+    if (allRequiredCompleted && onVerificationComplete) {
+      onVerificationComplete();
+    }
   }, [verificationStates, onVerificationComplete]);
 
   // Clear sequence messages when verification states change
@@ -405,57 +405,173 @@ console.log("user", user)
     }
   };
 
-  // Function to check verification status
+  // Add state for Telegram username
+  const [telegramUsername, setTelegramUsername] = useState('@Narayan160320');
+
+  // Enhanced checkTelegramChannelVerification function with detailed logging
   const checkTelegramChannelVerification = async () => {
-    if (!user?.id) return;
+    console.log('🔍 Starting Telegram channel verification check...');
+    console.log(' Current user ID:', user?.id);
+    
+    if (!user?.id) {
+      console.log('❌ No user ID found, aborting verification');
+      return;
+    }
+
+    if (!telegramUsername.trim()) {
+      toast.error('Please enter your Telegram username first');
+      return;
+    }
     
     try {
+      console.log('📱 Checking session storage for verification data...');
       const storedData = sessionStorage.getItem('telegram_channel_verification');
-      if (!storedData) return;
       
+      if (!storedData) {
+        console.log('❌ No verification data found in session storage');
+        toast.error('No verification data found. Please start the verification process again.');
+        return;
+      }
+      
+      console.log('📋 Found stored verification data:', storedData);
       const { code, userId, timestamp } = JSON.parse(storedData);
+      
+      console.log('🔑 Verification details:', {
+        code,
+        userId,
+        timestamp: new Date(timestamp).toISOString(),
+        currentTime: new Date().toISOString(),
+        timeDifference: Date.now() - timestamp
+      });
       
       // Check if verification is still valid (24 hours)
       if (Date.now() - timestamp > 24 * 60 * 60 * 1000) {
+        console.log('⏰ Verification code expired (older than 24 hours)');
         sessionStorage.removeItem('telegram_channel_verification');
         toast.error('Verification code expired. Please generate a new one.');
         return;
       }
       
+      console.log('✅ Verification code is still valid');
+      
       // Check if user ID matches current user
       if (userId !== user.id) {
+        console.log('❌ User ID mismatch:', { storedUserId: userId, currentUserId: user.id });
         sessionStorage.removeItem('telegram_channel_verification');
+        toast.error('User ID mismatch. Please start verification again.');
         return;
       }
       
+      console.log('✅ User ID matches, proceeding with membership check...');
+      
       // Initialize Telegram service
+      console.log('🤖 Initializing Telegram verification service...');
       const telegramService = new TelegramVerificationService();
       
-      // Check if user is member of channel
-      const membership = await telegramService.checkChannelMembership(userId);
+      // Test bot connection first
+      console.log('🔌 Testing bot connection...');
+      const botTest = await telegramService.testBotConnection();
+      console.log('🤖 Bot connection test result:', botTest);
       
-      if (membership.isMember) {
+      if (!botTest.success) {
+        console.log('❌ Bot connection failed:', botTest.error);
+        throw new Error(`Bot connection failed: ${botTest.error}`);
+      }
+      
+      console.log('✅ Bot connection successful');
+      
+      // Get channel info
+      console.log('📢 Getting channel information...');
+      const channelInfo = await telegramService.getChannelInfo();
+      console.log('📢 Channel info:', channelInfo);
+      
+      if (!channelInfo) {
+        console.log('❌ Could not get channel information');
+        throw new Error('Could not get channel information');
+      }
+      
+      console.log('✅ Channel information retrieved successfully');
+      
+      // Check if user is member of channel using username
+      console.log('👥 Checking channel membership for username:', telegramUsername);
+      const membership = await telegramService.checkChannelMembership(telegramUsername);
+      console.log('👥 Full membership check result:', membership);
+      console.log('👥 Membership status:', membership?.status);
+      console.log('👥 Is member:', membership?.isMember);
+      console.log('👥 Has error:', membership?.error);
+      
+      if (membership && membership.isMember) {
+        console.log('🎉 SUCCESS: User is confirmed member of the channel!');
+        console.log('👤 User details from membership:', membership.user);
+        
         // Clear stored data
+        console.log('🗑️ Clearing verification data from session storage');
         sessionStorage.removeItem('telegram_channel_verification');
         
         // Update verification status in user profile
-        await UserProfileService.updateTelegramJoin(user.id, {
-          verification_method: 'channel_membership_verification',
-          telegram_channel: '@codexero_testing_1',
-          verification_code: code,
-          verified_at: new Date().toISOString(),
-          membership_status: membership.status
+        console.log('💾 Updating user profile with Telegram verification...');
+        try {
+          const profileUpdateData = {
+            verification_method: 'channel_membership_verification',
+            telegram_channel: channelInfo.username,
+            verification_code: code,
+            verified_at: new Date().toISOString(),
+            membership_status: membership.status,
+            channel_title: channelInfo.title,
+            member_count: channelInfo.memberCount
+          };
+          
+          console.log('📝 Profile update data:', profileUpdateData);
+          
+          await UserProfileService.updateTelegramJoin(user.id, profileUpdateData);
+          console.log('✅ User profile updated successfully');
+          
+        } catch (profileError) {
+          console.warn('⚠️ Could not update profile, but verification succeeded:', profileError);
+          console.log('📊 Profile update error details:', {
+            error: profileError.message,
+            stack: profileError.stack
+          });
+          // Continue with local state update even if profile update fails
+        }
+        
+        console.log('🔄 Updating local verification state to completed');
+        setVerificationStates(prev => {
+          const newState = { ...prev, telegramJoin: true };
+          console.log('📊 New verification states:', newState);
+          return newState;
         });
         
-        setVerificationStates(prev => ({ ...prev, telegramJoin: true }));
         toast.success('✅ Telegram verification completed! Welcome to the community!');
+        console.log('🎊 Telegram verification flow completed successfully!');
         
       } else {
-        toast.error('❌ Verification failed. Please make sure you joined the channel and try again.');
+        console.log('❌ VERIFICATION FAILED: User is not a member of the channel');
+        console.log(' Failure details:', {
+          membership: membership,
+          isMember: membership?.isMember,
+          status: membership?.status,
+          error: membership?.error,
+          user: membership?.user
+        });
+        
+        const errorMsg = membership?.error || 'User not found in channel';
+        toast.error(`❌ Verification failed: ${errorMsg}. Please make sure you joined the channel and try again.`);
+        
+        console.log('💡 Troubleshooting tips:');
+        console.log('   - Make sure you actually joined the channel');
+        console.log('   - Check if the bot has admin rights in the channel');
+        console.log('   - Verify the channel username is correct');
+        console.log('   - Try refreshing and checking again');
       }
       
     } catch (error) {
-      console.error('Error checking channel verification:', error);
+      console.error('💥 ERROR during Telegram verification check:', error);
+      console.error('📊 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
       toast.error(`Failed to check verification status: ${error.message}`);
     }
   };
@@ -479,8 +595,7 @@ console.log("user", user)
     }
   };
 
-  // Update the button click handler
-  const handleTelegramButtonClick = handleTelegramVerification;
+
   
   const handleTwitterDisconnect = async () => {
     if (!user?.id) {
@@ -813,32 +928,119 @@ console.log("user", user)
     }
   };
 
-    const handleTelegramJoin = async () => {
+  // Enhanced handleTelegramJoin function with logging
+  const handleTelegramJoin = async () => {
+    console.log('🚀 Starting Telegram join verification process...');
+    console.log('👤 Current user:', { id: user?.id, username: user?.user_metadata?.username });
+    
     if (!user?.id) {
+      console.log('❌ No user ID found, showing error');
       toast.error('Please connect Twitter first');
       return;
     }
 
+    console.log('⏳ Setting loading state for Telegram join...');
     setLoading(prev => ({ ...prev, telegramJoin: true }));
     
     try {
-      // Skip Telegram verification for now - always mark as completed
-      console.log('Telegram verification skipped - marking as completed');
+      console.log('🤖 Initializing Telegram verification service...');
+      const telegramService = new TelegramVerificationService();
       
-      // Mark as completed immediately
-      setVerificationStates(prev => ({ ...prev, telegramJoin: true }));
-      toast.success('✅ Telegram verification completed! (Skipped for now)');
+      // Test bot connection first
+      console.log('🔌 Testing bot connection...');
+      const botTest = await telegramService.testBotConnection();
+      console.log('🤖 Bot connection test result:', botTest);
+      
+      if (!botTest.success) {
+        console.log('❌ Bot connection failed:', botTest.error);
+        throw new Error(`Telegram bot connection failed: ${botTest.error}`);
+      }
+      
+      console.log('✅ Bot connection successful:', botTest.bot);
+      
+      // Get channel info
+      console.log('📢 Getting channel information...');
+      const channelInfo = await telegramService.getChannelInfo();
+      console.log('📢 Channel info retrieved:', channelInfo);
+      
+      if (!channelInfo) {
+        console.log('❌ Could not get channel information');
+        throw new Error('Could not get channel information');
+      }
+      
+      console.log('✅ Channel information retrieved successfully');
+      
+      // Generate verification code
+      console.log('🔑 Generating verification code...');
+      const verificationCode = telegramService.generateVerificationCode();
+      console.log('🔑 Generated verification code:', verificationCode);
+      
+      // Store verification data in session storage
+      const verificationData = {
+        code: verificationCode,
+        userId: user.id,
+        timestamp: Date.now(),
+        channelUsername: channelInfo.username,
+        channelTitle: channelInfo.title
+      };
+      
+      console.log('💾 Storing verification data in session storage:', verificationData);
+      sessionStorage.setItem('telegram_channel_verification', JSON.stringify(verificationData));
+      
+      // Show instructions to user
+      const instructions = `
+🔗 Join our Telegram channel: ${channelInfo.title}
+📱 Channel: ${telegramService.channelUsername}
+ Verification Code: ${verificationCode}
+
+Steps:
+1. Click the channel link above
+2. Join the channel
+3. Come back and click "Verify Membership"
+    `;
+      
+      console.log('📋 Instructions for user:', instructions);
+      
+      // Open channel in new tab
+      const channelUrl = `https://t.me/${channelInfo.username.replace('@', '')}`;
+      console.log('🔗 Opening channel URL:', channelUrl);
+      window.open(channelUrl, '_blank');
+      
+      // Show instructions and verification button
+      console.log('💬 Showing instructions toast to user');
+      toast.info(instructions, { autoClose: false });
+      
+      // Update button to show verification option
+      console.log('🔄 Updating verification state to pending...');
+      setVerificationStates(prev => {
+        const newState = { ...prev, telegramJoin: false };
+        console.log('📊 New verification states:', newState);
+        return newState;
+      });
+      
+      console.log('✅ Telegram join process completed successfully');
+
+      setTimeout(()=>{
+        handleTelegramVerification()
+      },5000)
       
     } catch (error) {
-      console.error('Telegram verification error:', error);
-      toast.error(`Failed to complete verification: ${error.message}`);
+      console.error('💥 ERROR during Telegram join process:', error);
+      console.error('📊 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      toast.error(`Failed to start verification: ${error.message}`);
     } finally {
+      console.log('⏳ Clearing loading state for Telegram join');
       setLoading(prev => ({ ...prev, telegramJoin: false }));
     }
   };
 
 
 
+  // Fix 3: Update the getButtonText function
   const getButtonText = (step, isVerified, isLoading) => {
     if (isVerified) return '✓ Completed';
     if (isLoading) return 'Processing...';
@@ -853,7 +1055,7 @@ console.log("user", user)
       case 'customUsername':
         return 'Check Display Name';
       case 'telegramJoin':
-        return 'Skip for Now';
+        return 'Join Telegram';  // Changed from 'Skip for Now'
       default:
         return 'Verify';
     }
@@ -1066,37 +1268,70 @@ console.log("user", user)
         </div>
 
         {/* Telegram Join */}
-        <div className="mb-8 p-8 bg-gradient-to-r from-cyan-50/80 to-blue-50/80 rounded-2xl border border-cyan-200/50 shadow-lg">
-          <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-4">
-                <div className="w-16 h-16 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full border border-cyan-400/30 flex items-center justify-center">
-                  <span className="text-2xl">✈️</span>
-                </div>
-                <div>
-                  <h3 className="text-2xl font-bold text-cyan-800 mb-2">Join Telegram</h3>
-                  <p className="text-gray-700 mb-2">Join our Telegram community (Skipped for now - click to mark as completed)</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                onClick={handleTelegramJoin}
-                disabled={loading.telegramJoin || verificationStates.telegramJoin}
-                className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
-                  verificationStates.telegramJoin 
-                    ? 'bg-cyan-500 text-white cursor-not-allowed opacity-60'
-                    : loading.telegramJoin 
-                      ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white hover:shadow-xl hover:scale-105 transform'
-                }`}
-              >
-                {getButtonText('telegramJoin', verificationStates.telegramJoin, loading.telegramJoin)}
-              </button>
-            </div>
-          </div>
+        
+{/* Telegram Join */}
+<div className="mb-8 p-8 bg-gradient-to-r from-cyan-50/80 to-blue-50/80 rounded-2xl border border-cyan-200/50 shadow-lg">
+  <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+    <div className="flex-1">
+      <div className="flex items-center gap-4 mb-4">
+        <div className="w-16 h-16 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-full border border-cyan-400/30 flex items-center justify-center">
+          <span className="text-2xl">✈️</span>
         </div>
+        <div>
+          <h3 className="text-2xl font-bold text-cyan-800 mb-2">Join Telegram</h3>
+          <p className="text-gray-700 mb-2">
+            {verificationStates.telegramJoin === 'pending' 
+              ? 'Join our channel and verify your membership'
+              : 'Join our Telegram community to complete verification'
+            }
+          </p>
+          {verificationStates.telegramJoin === 'pending' && (
+            <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                �� Check your session storage for verification code and channel details
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+    
+    <div className="flex flex-col sm:flex-row gap-3">
+      {verificationStates.telegramJoin === 'pending' ? (
+        <>
+          <button
+            onClick={checkTelegramChannelVerification}
+            disabled={loading.telegramJoin}
+            className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-semibold transition-all duration-300"
+          >
+            Verify Membership
+          </button>
+          <button
+            onClick={handleTelegramJoin}
+            disabled={loading.telegramJoin}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold transition-all duration-300"
+          >
+            Generate New Code
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={handleTelegramJoin}
+          disabled={loading.telegramJoin || verificationStates.telegramJoin === true}
+          className={`px-8 py-4 rounded-xl font-semibold transition-all duration-300 shadow-lg ${
+            verificationStates.telegramJoin === true
+              ? 'bg-cyan-500 text-white cursor-not-allowed opacity-60'
+              : loading.telegramJoin 
+                ? 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white hover:shadow-xl hover:scale-105 transform'
+          }`}
+        >
+          {getButtonText('telegramJoin', verificationStates.telegramJoin === true, loading.telegramJoin)}
+        </button>
+      )}
+    </div>
+  </div>
+</div>
       </div>
 
       {/* Skip for Testing Button */}
@@ -1135,9 +1370,9 @@ console.log("user", user)
         </div>
         <div className="text-center">
           <span className="text-sm text-gray-600">
-            {Object.values(verificationStates).filter(Boolean).length >= 4
+            {Object.values(verificationStates).filter(Boolean).length >= 5
               ? '🎉 All required verifications completed!' 
-              : `${4 - Object.values(verificationStates).filter(Boolean).length} required steps remaining`
+              : `${5 - Object.values(verificationStates).filter(Boolean).length} required steps remaining`
             }
           </span>
         </div>

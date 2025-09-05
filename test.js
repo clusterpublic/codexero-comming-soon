@@ -4,7 +4,7 @@ const options = {
 	method: 'GET',
 	hostname: 'twitter-x.p.rapidapi.com',
 	port: null,
-	path: '/user/details?username=NarayanS1592424',
+	path: '/user/details?username=Narayan1603',
 	headers: {
 		'x-rapidapi-key': '47822bb3bemsha001819593243e5p1b709djsn6666ce549748',
 		'x-rapidapi-host': 'twitter-x.p.rapidapi.com'
