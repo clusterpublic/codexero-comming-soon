@@ -83,7 +83,7 @@ function LoadingScreen({ onFinish }) {
   );
 }
 
-function WaitlistModal({ open, onClose }) {
+export function WaitlistModal({ open, onClose }) {
   const [counter, setCounter] = useState(950);
   const [animating, setAnimating] = useState(false);
   const [formState, setFormState] = useState('idle'); // idle | securing | secured
@@ -139,7 +139,7 @@ function WaitlistModal({ open, onClose }) {
 
       setAnimating(true);
       let start = 0;
-      let end = 300 + count;
+      let end = count;
       let duration = 2000;
       let startTime = Date.now();
       function update() {
@@ -282,15 +282,15 @@ function WaitlistModal({ open, onClose }) {
           <span className="badge-text">EXCLUSIVE</span>
           <div className="badge-glow"></div>
         </div>
-        <h2 className="modal-title">Be Among The First 1000</h2>
+        <h2 className="modal-title">Be Among The First 3500</h2>
         <p className="modal-subtitle">Join the elite early access list for CodeXero</p>
         <div className="spots-counter">
           <div className="counter-value">
             <span className="counter-number">{counter}</span>
-            <span className="counter-total">/ 1000</span>
+            <span className="counter-total">/ 3500</span>
           </div>
           <div className="counter-label">Spots Remaining</div>
-          <div className="counter-urgency">Only {1000 - counter} left!</div>
+          <div className="counter-urgency">Only {3500 - counter} left!</div>
         </div>
         <div className="vip-benefits">
           <h3>VIP Early Bird Benefits:</h3>

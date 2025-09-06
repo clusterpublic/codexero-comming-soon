@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Header from '../components/Header';
+
 import '../pages/BrandingKit.css';
 
 // Import all logo assets
@@ -99,10 +100,12 @@ import banner1 from '../assets/CODEXERO-LOGO2/8-BANNER/1128X376.jpg';
 import banner2 from '../assets/CODEXERO-LOGO2/8-BANNER/1500X500.jpg';
 import banner3 from '../assets/CODEXERO-LOGO2/8-BANNER/820X312.jpg';
 import banner4 from '../assets/CODEXERO-LOGO2/8-BANNER/HIGH RESO.jpg';
+import { WaitlistModal } from './HomePage';
 
 export default function BrandingKit() {
   const [activeTab, setActiveTab] = useState('logos');
   const [selectedImage, setSelectedImage] = useState(null);
+  const [waitlistOpen, setWaitlistOpen] = useState(false);
 
   const logoVariations = [
     { name: 'Logo 1', png: png1, jpg: jpg1, ai: ai1 },
@@ -186,7 +189,8 @@ export default function BrandingKit() {
 
   return (
     <div className="branding-kit-page">
-      <Header showWaitlistButton={false} />
+      <WaitlistModal open={waitlistOpen} onClose={() => setWaitlistOpen(false)} />
+      <Header onWaitlistOpen={() => setWaitlistOpen(true)} showWaitlistButton={true} />
       
       <div className="branding-kit-container">
         <div className="branding-kit-header">
