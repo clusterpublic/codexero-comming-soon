@@ -231,7 +231,7 @@ export function WaitlistModal({ open, onClose }) {
         ]);
 
       if (error) {
-        console.error('Error saving subscription:', error);
+        console.error('Error saving subscription:', error); 
         setFormState('idle');
         return;
       }
