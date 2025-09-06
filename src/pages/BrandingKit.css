@@ -275,6 +275,64 @@
   background: linear-gradient(45deg, #607D8B, #455A64);
 }
 
+.download-btn.pdf {
+  background: linear-gradient(45deg, #FF5722, #E64A19);
+}
+
+/* Color Palette Styles */
+.color-palette-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 40px;
+}
+
+.color-palette-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid rgba(255, 107, 71, 0.2);
+  max-width: 800px;
+  width: 100%;
+  backdrop-filter: blur(20px);
+}
+
+.color-palette-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 107, 71, 0.4);
+}
+
+.color-palette-preview {
+  margin-bottom: 20px;
+  border-radius: 15px;
+  overflow: hidden;
+  border: 2px solid rgba(255, 107, 71, 0.3);
+  background: white;
+}
+
+.pdf-viewer {
+  border: none;
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.color-palette-info h3 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #2d2d2d;
+  margin-bottom: 10px;
+}
+
+.color-palette-info p {
+  color: #666;
+  margin-bottom: 20px;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
 /* Patterns Grid */
 .patterns-grid {
   display: grid;
@@ -386,6 +444,14 @@
   color: #666;
   text-align: center;
   margin-bottom: 15px;
+}
+
+.banner-info {
+  text-align: center;
+}
+
+.banner-info .download-btn {
+  margin: 0 auto;
 }
 
 /* Brand Guidelines */

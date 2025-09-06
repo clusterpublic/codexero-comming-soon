@@ -100,6 +100,9 @@ import banner1 from '../assets/CODEXERO-LOGO2/8-BANNER/1128X376.jpg';
 import banner2 from '../assets/CODEXERO-LOGO2/8-BANNER/1500X500.jpg';
 import banner3 from '../assets/CODEXERO-LOGO2/8-BANNER/820X312.jpg';
 import banner4 from '../assets/CODEXERO-LOGO2/8-BANNER/HIGH RESO.jpg';
+
+// Color Palette PDF
+import colorPalettePDF from '../assets/CODEXERO-LOGO2/6-COLOR PALLETE/CX.pdf';
 import { WaitlistModal } from './HomePage';
 
 export default function BrandingKit() {
@@ -109,27 +112,20 @@ export default function BrandingKit() {
 
   const logoVariations = [
     { name: 'Logo 1', png: png1, jpg: jpg1, ai: ai1 },
-    { name: 'Logo 1-1', png: png1_1, jpg: jpg1_1, ai: ai1_1 },
-    { name: 'Logo 2', png: png2, jpg: jpg2, ai: ai2 },
-    { name: 'Logo 2-1', png: png2_1, jpg: jpg2_1, ai: ai2_1 },
-    { name: 'Logo 3', png: png3, jpg: jpg3, ai: ai3 },
-    { name: 'Logo 3-1', png: png3_1, jpg: jpg3_1, ai: ai3_1 },
-    { name: 'Logo 4', png: png4, jpg: jpg4, ai: ai4 },
-    { name: 'Logo 4-1', png: png4_1, jpg: jpg4_1, ai: ai4_1 },
-    { name: 'Logo 5', png: png5, jpg: jpg5, ai: ai5 },
-    { name: 'Logo 5-1', png: png5_1, jpg: jpg5_1, ai: ai5_1 },
-    { name: 'Logo 6', png: png6, jpg: jpg6, ai: ai6 },
-    { name: 'Logo 6-1', png: png6_1, jpg: jpg6_1, ai: ai6_1 },
-    { name: 'Logo 7', png: png7, jpg: jpg7, ai: ai7 },
-    { name: 'Logo 7-1', png: png7_1, jpg: jpg7_1, ai: ai7_1 },
-    { name: 'Logo 8', png: png8, jpg: jpg8, ai: ai8 },
-    { name: 'Logo 8-1', png: png8_1, jpg: jpg8_1, ai: ai8_1 },
-    { name: 'Logo 9', png: png9, jpg: jpg9, ai: ai9 },
-    { name: 'Logo 9-1', png: png9_1, jpg: jpg9_1, ai: ai9_1 },
-    { name: 'Logo 10', png: png10, jpg: jpg10, ai: ai10 },
-    { name: 'Logo 10-1', png: png10_1, jpg: jpg10_1, ai: ai10_1 },
-    { name: 'Logo 11', png: png11, jpg: jpg11, ai: ai11 },
-    { name: 'Logo 11-1', png: png11_1, jpg: jpg11_1, ai: ai11_1 },
+    { name: 'Logo 2', png: png1_1, jpg: jpg1_1, ai: ai1_1 },
+    { name: 'Logo 3', png: png2, jpg: jpg2, ai: ai2 },
+    { name: 'Logo 4', png: png2_1, jpg: jpg2_1, ai: ai2_1 },
+    { name: 'Logo 5', png: png3, jpg: jpg3, ai: ai3 },
+    { name: 'Logo 6', png: png3_1, jpg: jpg3_1, ai: ai3_1 },
+    { name: 'Logo 7', png: png5, jpg: jpg5, ai: ai5 },
+    { name: 'Logo 8', png: png5_1, jpg: jpg5_1, ai: ai5_1 },
+    { name: 'Logo 9', png: png7, jpg: jpg7, ai: ai7 },
+    { name: 'Logo 10', png: png7_1, jpg: jpg7_1, ai: ai7_1 },
+    { name: 'Logo 11', png: png8, jpg: jpg8, ai: ai8 },
+    { name: 'Logo 12', png: png8_1, jpg: jpg8_1, ai: ai8_1 },
+    { name: 'Logo 13', png: png10, jpg: jpg10, ai: ai10 },
+    { name: 'Logo 14', png: png10_1, jpg: jpg10_1, ai: ai10_1 },
+    { name: 'SVG Logo', png: svg1, type:"svg" },
   ];
 
   const svgLogos = [
@@ -211,7 +207,7 @@ export default function BrandingKit() {
             className={`tab-btn ${activeTab === 'svg' ? 'active' : ''}`}
             onClick={() => setActiveTab('svg')}
           >
-            SVG Logos
+            Color Pallete
           </button>
           <button 
             className={`tab-btn ${activeTab === 'patterns' ? 'active' : ''}`}
@@ -232,7 +228,7 @@ export default function BrandingKit() {
             <div className="logos-section">
               <h2>Logo Variations</h2>
               <p className="section-description">
-                22 unique logo variations available in PNG, JPEG, and AI formats
+                15 unique logo variations available in PNG, JPEG, and AI formats
               </p>
               <div className="logos-grid">
                 {logoVariations.map((logo, index) => (
@@ -243,7 +239,12 @@ export default function BrandingKit() {
                     <div className="logo-info">
                       <h3>{logo.name}</h3>
                       <div className="format-buttons">
-                        <button 
+                        {logo.type==="svg"? <button 
+                          className="format-btn jpg"
+                          onClick={() => downloadFile(logo.png, `${logo.name}.svg`)}
+                        >
+                          SVG
+                        </button>:<><button 
                           className="format-btn png"
                           onClick={() => downloadFile(logo.png, `${logo.name}.png`)}
                         >
@@ -260,7 +261,7 @@ export default function BrandingKit() {
                           onClick={() => downloadFile(logo.ai, `${logo.name}.ai`)}
                         >
                           AI
-                        </button>
+                        </button></>}
                       </div>
                     </div>
                   </div>
@@ -271,27 +272,32 @@ export default function BrandingKit() {
 
           {activeTab === 'svg' && (
             <div className="svg-section">
-              <h2>SVG Logos</h2>
+              <h2>Color Palette</h2>
               <p className="section-description">
-                Scalable vector graphics perfect for web and print applications
+                Official CodeXero color palette and brand guidelines
               </p>
-              <div className="svg-grid">
-                {svgLogos.map((logo, index) => (
-                  <div key={index} className="svg-card">
-                    <div className="svg-preview">
-                      <img src={logo.src} alt={logo.name} />
-                    </div>
-                    <div className="svg-info">
-                      <h3>{logo.name}</h3>
-                      <button 
-                        className="download-btn svg"
-                        onClick={() => downloadFile(logo.src, `${logo.name}.svg`)}
-                      >
-                        Download SVG
-                      </button>
-                    </div>
+              <div className="color-palette-container">
+                <div className="color-palette-card">
+                  <div className="color-palette-preview">
+                    <iframe 
+                      src={colorPalettePDF} 
+                      width="100%" 
+                      height="600px"
+                      title="CodeXero Color Palette"
+                      className="pdf-viewer"
+                    />
                   </div>
-                ))}
+                  <div className="color-palette-info">
+                    <h3>CodeXero Color Palette</h3>
+                    <p>Complete color palette with hex codes, RGB values, and usage guidelines</p>
+                    <button 
+                      className="download-btn pdf"
+                      onClick={() => downloadFile(colorPalettePDF, 'CodeXero-Color-Palette.pdf')}
+                    >
+                      Download PDF
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
