@@ -21,6 +21,11 @@ export default function Header({ onWaitlistOpen, showWaitlistButton = true, clas
     setIsMenuOpen(false);
   };
 
+  const handleTwitterClick = () => {
+    window.open('https://x.com/codexero_xyz', '_blank');
+    setIsMenuOpen(false);
+  };
+
   return (
     <header className={`header ${className}`}>
       {/* Left Side - Logo */}
@@ -44,6 +49,16 @@ export default function Header({ onWaitlistOpen, showWaitlistButton = true, clas
           <button className="get-started-btn" onClick={() => navigate('/brand-kit')}>
             Brand Kit
           </button>
+          <button 
+            className="get-started-btn flex items-center gap-2" 
+            onClick={handleTwitterClick} 
+            title="Follow us on Twitter"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            <span className="hidden sm:inline">Twitter</span>
+          </button>
         </nav>
 
         {/* Mobile Hamburger Menu - Hidden on desktop */}
@@ -51,13 +66,13 @@ export default function Header({ onWaitlistOpen, showWaitlistButton = true, clas
           {/* Hamburger Button */}
           <button
             onClick={toggleMenu}
-            className="hamburger-btn p-2 rounded-lg bg-white/10 backdrop-blur-md border border-orange-200/30 hover:bg-white/20 transition-all duration-300"
+            className="p-2 rounded-lg bg-white/10 backdrop-blur-md border border-orange-200/30 hover:bg-white/20 transition-all duration-300"
             aria-label="Toggle menu"
           >
             <div className="w-6 h-6 flex flex-col justify-center items-center">
-              <span className={`hamburger-line block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
-              <span className={`hamburger-line block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
-              <span className={`hamburger-line block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
+              <span className={`block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? 'rotate-45 translate-y-1' : '-translate-y-1'}`}></span>
+              <span className={`block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? 'opacity-0' : 'opacity-100'}`}></span>
+              <span className={`block w-5 h-0.5 bg-orange-500 transition-all duration-300 ${isMenuOpen ? '-rotate-45 -translate-y-1' : 'translate-y-1'}`}></span>
             </div>
           </button>
 
@@ -81,6 +96,17 @@ export default function Header({ onWaitlistOpen, showWaitlistButton = true, clas
                   className="get-started-btn w-full"
                 >
                   🎨 Brand Kit
+                </button>
+
+                {/* Twitter Button */}
+                <button
+                  onClick={handleTwitterClick}
+                  className="get-started-btn w-full flex items-center justify-center gap-2"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                  </svg>
+                  Follow on Twitter
                 </button>
               </div>
             </div>
