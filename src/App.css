@@ -11,11 +11,12 @@ body {
   overflow-x: hidden;
 }
 
-.container {
+.container1 {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   position: relative;
+  width: 100%;
 }
 
 /* Header Styles */
@@ -366,8 +367,8 @@ body {
 .logo-3d-container {
   position: relative;
   z-index: 2;
-  width: 400px;
-  height: 300px;
+  width: 640px;
+  height: 640px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -431,8 +432,8 @@ body {
 
 .logo-3d-wrapper {
   position: relative;
-  width: 300px;
-  height: 200px;
+  width: 640px;
+  height: 640px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -714,13 +715,13 @@ body {
   }
 
   .logo-3d-container {
-    width: 300px;
-    height: 250px;
+    width: 520px;
+    height: 520px;
   }
 
   .logo-3d-wrapper {
-    width: 250px;
-    height: 150px;
+    width: 520px;
+    height: 520px;
   }
 
   .main-logo {
@@ -1124,6 +1125,9 @@ body {
 }
 
 .logo-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
   margin-bottom: 40px;
 }
@@ -1774,6 +1778,14 @@ body {
 
 /* Additional Responsive Modal Styles */
 @media (max-width: 768px) {
+  .main-logo{
+    margin-top: -100px;
+  }
+
+  .main-content{
+    margin-top: -150px !important;
+  }
+
   .modal-content {
     padding: 30px 20px !important;
     margin: 20px !important;
@@ -1866,8 +1878,8 @@ canvas[data-confetti] {
   }
 
   .logo-3d-container {
-    width: 200px !important;
-    height: 150px !important;
+    width: 350px !important;
+    height: 350px !important;
   }
 
   .logo-3d-wrapper {
@@ -1876,10 +1888,11 @@ canvas[data-confetti] {
 
   .main-logo {
     width: 350px;
+    margin-top: 0px !important;
   }
 
   .main-content {
-    margin-top: 100px !important;
+    margin-top: 0px !important;
   }
 
   /* 3. Reduce font size of "CodeXero is coming" */
@@ -2000,7 +2013,7 @@ canvas[data-confetti] {
   }
 
   .main-content {
-    margin-top: 100px !important;
+    /* margin-top: 100px !important; */
   }
 
   .wave-text,

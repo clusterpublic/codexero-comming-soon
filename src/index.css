@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.nav-container {
+  display: flex;
+  align-items: center;
+}
+
+.hamburger-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hamburger-line {
+  transition: all 0.3s ease;
+}
+
+/* Ensure mobile menu is properly hidden on desktop */
+@media (min-width: 768px) {
+  .md\\:hidden {
+    display: none !important;
+  }
+}
+
+/* Ensure desktop nav is hidden on mobile */
+@media (max-width: 767px) {
+  .hidden {
+    display: none !important;
+  }
+}
