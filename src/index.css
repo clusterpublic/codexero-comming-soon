@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Kalipixel';
+  src: url('./fonts/kalipixel/Kalipixel.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'kode';
+  src: url('./fonts/kode/Kode[wght].ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+
 .nav-container {
   display: flex;
   align-items: center;
