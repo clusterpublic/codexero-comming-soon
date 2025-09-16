@@ -5,6 +5,14 @@ import { supabase } from '../supabase';
 import Confetti from '../Confetti';
 import seiLogo from "../assets/sei_red_and_white.svg"
 import Header from '../components/Header';
+import TextPressure from '../components/three/TextPressure';
+import KalipixelUrl from "../fonts/kalipixel/Kalipixel.ttf"
+import Nabla from "../fonts/Nabla/Nabla-Regular-VariableFont_EDPT,EHLT.ttf"
+import kode from "../fonts/kode/Kode[wght].ttf"
+import space from "../fonts/space/EQCSpaceView.ttf"
+import jabe from "../fonts/Jabe/JxTabeDemoRegular-rga1A.ttf"
+import sapceHorizon from "../fonts/space/SpaceHorizon-Regular.ttf"
+import elastre from "../fonts/elastre/Elastre.ttf"
 
 
 
@@ -231,7 +239,7 @@ export function WaitlistModal({ open, onClose }) {
         ]);
 
       if (error) {
-        console.error('Error saving subscription:', error); 
+        console.error('Error saving subscription:', error);
         setFormState('idle');
         return;
       }
@@ -388,9 +396,56 @@ function HomePage() {
                 <img src={logo} alt="CodeXero Logo" className="main-logo" />
               </div>
             </div>
+
+
             {/* Main Content */}
             <div className="main-content mt-[-200px]">
-              <h1 className="main-title wave-text">
+
+              <div className='flex flex-row justify-center'>
+                <TextPressure
+                  text="CodeXero is Coming."
+                  flex={true}
+                  alpha={false}
+                  stroke={false}
+                  width={true}
+                  weight={true}
+                  italic={true}
+                  textColor="#2d2d2d"
+                  strokeColor="#ff0000"
+                  minFontSize={20}
+                  fontFamily="kode"
+                  fontUrl={kode}
+                />
+                {/* <TextPressure
+                  text="is"
+                  flex={true}
+                  alpha={false}
+                  stroke={false}
+                  width={true}
+                  weight={true}
+                  italic={true}
+                  textColor="#2d2d2d"
+                  strokeColor="#ff0000"
+                  minFontSize={15}
+                  fontFamily="kode"
+                  fontUrl={kode}
+                />
+                <TextPressure
+                  text="Comming"
+                  flex={true}
+                  alpha={false}
+                  stroke={false}
+                  width={true}
+                  weight={true}
+                  italic={true}
+                  textColor="#2d2d2d"
+                  strokeColor="#ff0000"
+                  minFontSize={15}
+                  fontFamily="kode"
+                  fontUrl={kode}
+                /> */}
+                </div>
+              {/* <h1 className="main-title wave-text">
                 <span className="wave-letter">C</span>
                 <span className="wave-letter">o</span>
                 <span className="wave-letter">d</span>
@@ -410,8 +465,10 @@ function HomePage() {
                 <span className="wave-letter">n</span>
                 <span className="wave-letter">g</span>
                 <span className="wave-letter">.</span>
-              </h1>
+              </h1> */}
               <p className="subtitle">On <img src={seiLogo} alt="Sei" className="sei-logo" /> ICM moves faster.</p>
+
+
               {/* Flipping Glass Tags Section */}
               <div className="tags-inline">
                 <div className="tag-container-inline">

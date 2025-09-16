@@ -104,6 +104,8 @@ import banner4 from '../assets/CODEXERO-LOGO2/8-BANNER/HIGH RESO.jpg';
 // Color Palette PDF
 import colorPalettePDF from '../assets/CODEXERO-LOGO2/6-COLOR PALLETE/CX.pdf';
 import { WaitlistModal } from './HomePage';
+import TextPressure from '../components/three/TextPressure';
+import kode from '../fonts/kode/Kode[wght].ttf';
 
 export default function BrandingKit() {
   const [activeTab, setActiveTab] = useState('logos');
@@ -190,7 +192,21 @@ export default function BrandingKit() {
       
       <div className="branding-kit-container">
         <div className="branding-kit-header">
-          <h1 className="branding-kit-title">CodeXero Branding Kit</h1>
+          {/* <h1 className="branding-kit-title">CodeXero Branding Kit</h1> */}
+           <TextPressure
+                  text="CodeXero Branding Kit"
+                  flex={true}
+                  alpha={false}
+                  stroke={false}
+                  width={true}
+                  weight={true}
+                  italic={true}
+                  textColor="#2d2d2d"
+                  strokeColor="#ff0000"
+                  minFontSize={20}
+                  fontFamily="kode"
+                  fontUrl={kode}
+                />
           <p className="branding-kit-subtitle">
             Professional logo assets, patterns, and marketing materials for the CodeXero ecosystem
           </p>
