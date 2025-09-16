@@ -403,7 +403,7 @@ function HomePage() {
 
               <div className='flex flex-row justify-center'>
                 <TextPressure
-                  text="CodeXero is Comming."
+                  text="CodeXero is Coming."
                   flex={true}
                   alpha={false}
                   stroke={false}
